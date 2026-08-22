@@ -52,23 +52,31 @@
             <article class="property-card"><div class="property-image p1"><span>پیشنهاد ویژه</span></div><div class="property-copy"><small id="areaMirror1">{{lead.address or 'منطقه موردنظر شما'}}</small><strong>آپارتمان خوش‌نقشه و نورگیر</strong><div><span>۱۴۰ متر</span><span>۳ خواب</span><span>پارکینگ</span></div><b>قیمت متناسب با بودجه شما</b></div></article>
             <article class="property-card compact"><div class="property-image p2"></div><div class="property-copy"><small id="areaMirror2">{{lead.address or 'منطقه موردنظر شما'}}</small><strong>فایل کم‌سن و فول امکانات</strong><div><span>۱۱۰ متر</span><span>۲ خواب</span></div></div></article>
           </div>
-          <button class="next primary" id="showLeadPreview">ارسال همه فایل‌ها برای من</button>
+          <div class="lead-capture" id="leadCapture">
+            <div class="capture-head"><div><small>برای دریافت همه فایل‌ها</small><b>شماره تماس را بگذار</b></div><span>۱۰ ثانیه</span></div>
+            <input id="customerName" placeholder="نام (اختیاری)">
+            <input id="customerPhone" inputmode="tel" autocomplete="tel" maxlength="11" placeholder="مثلاً 09121234567">
+            <button class="next primary" id="submitCustomerLead">ارسال فایل‌ها برای من</button>
+            <small class="privacy-note">در این دموی فروش، شماره‌ای که وارد می‌کنید فقط برای نشان دادن جریان ثبت لید ذخیره می‌شود.</small>
+            <div class="capture-error" id="captureError"></div>
+            <div class="capture-success" id="captureSuccess" hidden><b>لید ثبت شد ✓</b><span>حالا دقیقاً ببین {{lead.business_name}} این درخواست را چطور در پنل خودش می‌بیند.</span><a id="merchantPreviewLink" href="/p/{{lead.slug}}">دیدن پنل لید {{lead.business_name}} ←</a></div>
+          </div>
           <button class="tiny-back" data-back="2">تغییر جستجو</button>
         </div>
       </div>
     </section>
 
     <section class="merchant-reveal" id="merchantReveal">
-      <div class="reveal-copy"><span class="section-label">کاری که برای شما انجام می‌دهد</span><h2>این کلیک، برای شما تبدیل به <em>لید واقعی</em> می‌شود.</h2><p>مشتری فرم بالا را پر می‌کند؛ شما همان لحظه نیاز دقیقش را می‌بینید و تماس می‌گیرید. نه سایت شلوغ، نه CRM پیچیده.</p></div>
+      <div class="reveal-copy"><span class="section-label">کاری که برای شما انجام می‌دهد</span><h2>این فرم، برای شما تبدیل به <em>لید واقعی</em> می‌شود.</h2><p>مشتری نوع معامله، محله، بودجه و شماره‌اش را وارد می‌کند؛ شما همان لحظه نیاز دقیقش را می‌بینید و تماس می‌گیرید. نه سایت شلوغ، نه CRM پیچیده.</p><a class="merchant-preview-btn" href="/p/{{lead.slug}}">باز کردن پنل لید خودم ←</a></div>
       <div class="lead-phone">
         <div class="phone-top"><span></span><b>لید جدید برای {{lead.business_name}}</b><time>همین الان</time></div>
         <div class="lead-alert"><i>⌂</i><div><strong>مشتری جدید ملکی</strong><p><b id="leadIntent">خرید</b> · <span id="leadArea">{{lead.address or 'سعادت‌آباد'}}</span></p></div></div>
         <div class="lead-fields"><div><span>بودجه</span><b id="leadBudget">۵ تا ۱۰ میلیارد</b></div><div><span>منبع</span><b>فایل‌یاب اختصاصی شما</b></div></div>
-        <div class="lead-contact"><span class="avatar">م</span><div><small>شماره مشتری بعد از ثبت درخواست</small><strong>09•• ••• ••47</strong></div><button>تماس</button></div>
+        <div class="lead-contact"><span class="avatar">م</span><div><small>شماره مشتری بعد از ثبت درخواست</small><strong id="leadPhoneMirror">09•• ••• ••47</strong></div><button>تماس</button></div>
       </div>
     </section>
 
-    <section class="how-it-works"><span class="section-label">خیلی ساده</span><h2>سه اتفاق. یک مشتری جدید.</h2><div class="three"><article><b>01</b><h3>مشتری لینک را باز می‌کند</h3><p>از اینستاگرام، بیو، QR، تبلیغ یا پیام شما.</p></article><article><b>02</b><h3>نیازش را در ۳۰ ثانیه می‌گوید</h3><p>نوع معامله، منطقه و بودجه؛ بدون نصب و ثبت‌نام طولانی.</p></article><article><b>03</b><h3>لید مستقیم برای شما می‌آید</h3><p>اطلاعات آماده‌ی تماس، با نیت خرید مشخص.</p></article></div></section>
+    <section class="how-it-works"><span class="section-label">خیلی ساده</span><h2>سه اتفاق. یک مشتری جدید.</h2><div class="three"><article><b>01</b><h3>مشتری لینک را باز می‌کند</h3><p>از اینستاگرام، بیو، QR، تبلیغ یا پیام شما.</p></article><article><b>02</b><h3>نیازش را در ۳۰ ثانیه می‌گوید</h3><p>نوع معامله، منطقه، بودجه و شماره تماس.</p></article><article><b>03</b><h3>لید مستقیم برای شما می‌آید</h3><p>اطلاعات آماده‌ی تماس، با نیت خرید مشخص.</p></article></div></section>
 
     <section class="personal-proof">
       <div class="proof-brand"><span class="brand-seal large">{{lead.business_name[:1]}}</span><div><small>نسخه‌ای که الان می‌بینید</small><h2>برای <em>{{lead.business_name}}</em> ساخته شده.</h2></div></div>
