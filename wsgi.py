@@ -4,9 +4,13 @@ from exports import register_exports
 from campaigns import register_campaigns
 from activation import register_activation
 from campaign_tools import register_campaign_tools
+from data_ingest import register_data_ingest
+from outreach import register_outreach
 
 register_capture(app, DB_PATH)
 register_exports(app, DB_PATH)
 register_campaigns(app, DB_PATH)
 register_activation(app, DB_PATH)
 register_campaign_tools(app)
+register_data_ingest(app, DB_PATH)
+register_outreach(app, DB_PATH)
