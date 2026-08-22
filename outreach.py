@@ -87,11 +87,16 @@ def register_outreach(app, db_path):
         return hooks[idx].format(name=lead['business_name'], url=demo_url(lead))
 
     def provider_config():
+        provider = (os.environ.get('SMS_PROVIDER') or '').strip().lower()
+        api_key = (os.environ.get('SMS_API_KEY') or '').strip()
+        sender = (os.environ.get('SMS_SENDER') or '').strip()
+        live = (os.environ.get('SMS_LIVE') or '0').strip() == '1'
         return {
-            'provider': (os.environ.get('SMS_PROVIDER') or '').strip().lower(),
-            'api_key': (os.environ.get('SMS_API_KEY') or '').strip(),
-            'sender': (os.environ.get('SMS_SENDER') or '').strip(),
-            'live': (os.environ.get('SMS_LIVE') or '0').strip() == '1',
+            'provider': provider,
+            'api_key': api_key,
+            'sender': sender,
+            'live': live,
+            'configured': bool(provider in {'ippanel','kavenegar'} and api_key and sender),
         }
 
     def send_ippanel(cfg, recipient, body):
@@ -132,7 +137,7 @@ def register_outreach(app, db_path):
         suppressions = conn.execute('SELECT COUNT(*) c FROM suppressions').fetchone()['c']
         conn.close()
         cfg = provider_config()
-        public_cfg = {'provider': cfg['provider'] or 'not configured', 'sender': cfg['sender'] or '—', 'live': cfg['live'], 'configured': bool(cfg['provider'] and cfg['api_key'] and cfg['sender'])}
+        public_cfg = {'provider': cfg['provider'] or 'not configured', 'sender': cfg['sender'] or '—', 'live': cfg['live'], 'configured': cfg['configured']}
         return render_template('outreach.html', counts=counts, recent=recent, suppressions=suppressions, config=public_cfg, verticals=VERTICALS, order=CAMPAIGN_ORDER)
 
     @app.post('/admin/outreach/prepare')
@@ -207,4 +212,4 @@ def register_outreach(app, db_path):
     @app.get('/health/outreach')
     def outreach_health():
         cfg = provider_config()
-        return jsonify({'ok': True, 'providers': ['ippanel','kavenegar'], 'configured': bool(cfg['provider'] and cfg['api_key'] and cfg['sender']), 'live': cfg['live']})
+        return jsonify({'ok': True, 'providers': ['ippanel','kavenegar'], 'configured': cfg['configured'], 'live': cfg['live']})
