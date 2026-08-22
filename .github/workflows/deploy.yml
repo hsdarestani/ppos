@@ -64,6 +64,7 @@ jobs:
             assert health['vertical_count'] == 30 and health['ab_ready'] and health['demo_ready']
             outreach = c.get('/health/outreach').get_json()
             assert outreach['ok'] is True and set(outreach['providers']) == {'ippanel','kavenegar'}
+            assert app.config['MAX_CONTENT_LENGTH'] >= 100 * 1024 * 1024
             for key, info in VERTICALS.items():
                 assert info.get('label') and info.get('product') and info.get('price')
                 assert len(info.get('hooks') or []) >= 2
@@ -119,7 +120,7 @@ jobs:
                 listen 80;
                 listen [::]:80;
                 server_name ppos.smarbiz.sbs;
-                client_max_body_size 12m;
+                client_max_body_size 120m;
 
                 location /static/ {
                     alias /opt/ppos/static/;
@@ -181,5 +182,5 @@ jobs:
             const server = '${{ steps.server.outcome }}';
             const publicHealth = '${{ steps.public.outcome }}';
             const icon = server === 'success' && publicHealth === 'success' ? '✅' : (server === 'success' ? '⚠️' : '❌');
-            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public campaign ops: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- Raw CSV/XLSX ingestion: **enabled**\n- SMS providers: **IPPanel + Kavenegar**\n- SMS default mode: **dry-run unless SMS_LIVE=1**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n`;
+            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public campaign ops: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- Raw CSV/XLSX ingestion: **enabled (100 MB)**\n- SMS providers: **IPPanel + Kavenegar**\n- SMS default mode: **dry-run unless SMS_LIVE=1**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n`;
             await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: 1, body});
