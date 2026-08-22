@@ -46,7 +46,7 @@ jobs:
             .venv/bin/pip install -q -r requirements.txt
             mkdir -p /opt/ppos/data
 
-            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py wsgi.py
+            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py wsgi.py
             .venv/bin/python - <<'PY'
             from wsgi import app
             from verticals import VERTICALS, CAMPAIGN_ORDER
@@ -54,10 +54,16 @@ jobs:
             assert c.get('/').status_code == 200
             assert len(VERTICALS) >= 30, f'Expected 30+ verticals, got {len(VERTICALS)}'
             assert len(CAMPAIGN_ORDER) == len(VERTICALS)
+            for key, info in VERTICALS.items():
+                assert info.get('label') and info.get('product') and info.get('price')
+                assert len(info.get('hooks') or []) >= 2, f'{key} needs A/B hooks'
+                assert len(info.get('questions') or []) == 3, f'{key} needs 3 demo questions'
             routes = {r.rule for r in app.url_map.iter_rules()}
             required = {
                 '/admin/campaigns',
                 '/admin/campaigns/import',
+                '/admin/campaigns/template.csv',
+                '/api/campaigns/readiness',
                 '/admin/campaign/<vertical>',
                 '/admin/campaign/<vertical>/sms.csv',
                 '/admin/campaign/<vertical>/calls.csv',
@@ -167,7 +173,7 @@ jobs:
             const server = '${{ steps.server.outcome }}';
             const publicHealth = '${{ steps.public.outcome }}';
             const icon = server === 'success' && publicHealth === 'success' ? '✅' : (server === 'success' ? '⚠️' : '❌');
-            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public HTTPS: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- URL: https://ppos.smarbiz.sbs\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n\n${server === 'success' && publicHealth !== 'success' ? 'The app passed its on-server self-test, but the public hostname is still unreachable. Check DNS/SSL.' : ''}`;
+            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public HTTPS: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- A/B hooks: **validated**\n- Demo questions: **validated**\n- URL: https://ppos.smarbiz.sbs\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n\n${server === 'success' && publicHealth !== 'success' ? 'The app passed its on-server self-test, but the public hostname is still unreachable. Check DNS/SSL.' : ''}`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
