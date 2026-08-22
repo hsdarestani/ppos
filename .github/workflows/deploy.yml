@@ -52,7 +52,7 @@ jobs:
             .venv/bin/pip install -q -r requirements.txt
             mkdir -p /opt/ppos/data
 
-            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py db_optimizations.py wsgi.py
+            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py db_optimizations.py wsgi.py
             .venv/bin/python - <<'PY'
             from wsgi import app
             from verticals import VERTICALS, CAMPAIGN_ORDER
@@ -82,13 +82,14 @@ jobs:
                 '/health/campaigns','/health/outreach',
                 '/admin/campaigns','/admin/campaigns/import','/admin/campaigns/template.csv','/admin/data/import-raw',
                 '/admin/outreach','/admin/outreach/prepare','/admin/outreach/send','/admin/outreach/suppress',
+                '/admin/calls','/admin/calls/<int:lead_id>/log',
                 '/admin/campaign/<vertical>','/admin/campaign/<vertical>/sms.csv','/admin/campaign/<vertical>/calls.csv',
                 '/v/<slug>','/m/<slug>','/api/v/<slug>/lead','/api/v/<slug>/event','/activate/<slug>',
                 '/admin/campaign/realestate','/api/realestate/<slug>/lead','/p/<slug>'
             }
             missing = required - routes
             assert not missing, f'Missing routes: {missing}'
-            for template in ['campaigns_hub.html','campaign_vertical.html','demo_vertical.html','merchant_vertical.html','activation_vertical.html','outreach.html']:
+            for template in ['campaigns_hub.html','campaign_vertical.html','demo_vertical.html','merchant_vertical.html','activation_vertical.html','outreach.html','calls.html']:
                 app.jinja_env.get_template(template)
             print('PPOS launch self-test passed')
             PY
@@ -193,5 +194,5 @@ jobs:
             const server = '${{ steps.server.outcome }}';
             const publicHealth = '${{ steps.public.outcome }}';
             const icon = server === 'success' && publicHealth === 'success' ? '✅' : (server === 'success' ? '⚠️' : '❌');
-            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public campaign ops: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- Raw CSV/XLSX ingestion: **enabled (100 MB)**\n- Large DB indexes/WAL: **enabled**\n- SMS providers: **IPPanel + Kavenegar**\n- SMS default mode: **dry-run unless SMS_LIVE=1**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n`;
+            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public campaign ops: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- Raw CSV/XLSX ingestion: **enabled (100 MB)**\n- Large DB indexes/WAL: **enabled**\n- SMS providers: **IPPanel + Kavenegar**\n- SMS default mode: **dry-run unless SMS_LIVE=1**\n- Presenter Call Desk: **enabled**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n- Call Desk: https://ppos.smarbiz.sbs/admin/calls\n`;
             await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: 1, body});
