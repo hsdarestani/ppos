@@ -1,4 +1,5 @@
 (()=>{
+  const extraCss=document.createElement('link');extraCss.rel='stylesheet';extraCss.href='/static/realestate-extra.css';document.head.appendChild(extraCss);
   const slug=window.PPOS_SLUG;
   const sent=new Set();
   const track=(type,meta={})=>{
