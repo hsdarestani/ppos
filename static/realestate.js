@@ -28,7 +28,7 @@
   const progress=document.getElementById('progressBar');
   const go=n=>{
     steps.forEach(s=>s.classList.toggle('active',Number(s.dataset.step)===n));
-    progress.style.width=({1:33,2:66,3:100}[n]||33)+'%';
+    if(progress)progress.style.width=({1:33,2:66,3:100}[n]||33)+'%';
     if(n===2)track('finder_started',{intent:state.intent});
     if(n===3){
       state.area=(document.getElementById('areaInput').value||'منطقه موردنظر').trim();
@@ -50,12 +50,41 @@
   document.querySelectorAll('[data-next]').forEach(btn=>btn.addEventListener('click',()=>go(Number(btn.dataset.next))));
   document.querySelectorAll('[data-back]').forEach(btn=>btn.addEventListener('click',()=>go(Number(btn.dataset.back))));
 
-  const showLead=document.getElementById('showLeadPreview');
-  showLead&&showLead.addEventListener('click',()=>{
-    const reveal=document.getElementById('merchantReveal');
-    track('lead_preview',state);
-    reveal.scrollIntoView({behavior:'smooth',block:'center'});
-    const phone=reveal.querySelector('.lead-phone');
-    phone.animate([{transform:'scale(.97)',boxShadow:'0 20px 60px #0005'},{transform:'scale(1.02)'},{transform:'scale(1)'}],{duration:650,easing:'ease-out'});
+  const submit=document.getElementById('submitCustomerLead');
+  submit&&submit.addEventListener('click',async()=>{
+    const phone=(document.getElementById('customerPhone').value||'').trim();
+    const name=(document.getElementById('customerName').value||'').trim();
+    const error=document.getElementById('captureError');
+    const success=document.getElementById('captureSuccess');
+    error.textContent='';
+    if(!/^09\d{9}$/.test(phone)){
+      error.textContent='شماره موبایل را به شکل 09121234567 وارد کنید.';
+      document.getElementById('customerPhone').focus();
+      return;
+    }
+    submit.disabled=true;
+    const old=submit.textContent;
+    submit.textContent='در حال ثبت...';
+    try{
+      const res=await fetch(`/api/realestate/${encodeURIComponent(slug)}/lead`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({...state,phone,name})
+      });
+      const data=await res.json();
+      if(!res.ok||!data.ok)throw new Error(data.error||'ثبت انجام نشد');
+      track('lead_preview',{...state,customer_lead_id:data.id});
+      track('phone_mock_submit',{...state});
+      document.getElementById('leadPhoneMirror').textContent=phone;
+      const link=document.getElementById('merchantPreviewLink');
+      if(link&&data.preview_url)link.href=data.preview_url;
+      success.hidden=false;
+      success.scrollIntoView({behavior:'smooth',block:'nearest'});
+      setTimeout(()=>document.getElementById('merchantReveal')?.scrollIntoView({behavior:'smooth',block:'center'}),900);
+    }catch(err){
+      error.textContent=err.message||'خطا در ثبت. دوباره تلاش کنید.';
+    }finally{
+      submit.disabled=false;
+      submit.textContent=old;
+    }
   });
 })();
