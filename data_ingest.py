@@ -6,6 +6,7 @@ import secrets
 import sqlite3
 from datetime import datetime
 from functools import wraps
+from itertools import chain
 
 from flask import flash, redirect, request, session, url_for
 from openpyxl import load_workbook
@@ -24,7 +25,6 @@ HEADER_ALIASES = {
     'owner': ['owner','owner_name','نام مسئول','نام فرد مسئول','مدیر','نام مدیر'],
     'instagram': ['instagram','اینستاگرام','اینستا'],
     'logo_url': ['logo_url','logo','لوگو'],
-    'source': ['source','منبع'],
 }
 
 CATEGORY_KEYWORDS = {
@@ -88,16 +88,14 @@ def _header_map(headers):
     out = {}
     for target, aliases in HEADER_ALIASES.items():
         for alias in aliases:
-            key = _canon(alias)
-            if key in normalized:
-                out[target] = normalized[key]
+            if _canon(alias) in normalized:
+                out[target] = normalized[_canon(alias)]
                 break
     return out
 
 
 def detect_vertical(category, name=''):
     hay = _canon(f'{category} {name}')
-    # More specific categories first to avoid generic آموزشگاه/زیبایی collisions.
     order = ['realestate','beauty','barber','auto','aesthetic','dentist','gym','trainer','language','repair','parts','carwash','fashion','gold','furniture','cabinet','restaurant','pet','mobile','immigration','travel','insurance','legal','home_services','hvac','carpet','laundry','studio','venue','education']
     for key in order:
         if any(_canon(word) in hay for word in CATEGORY_KEYWORDS.get(key, [])):
@@ -117,8 +115,7 @@ def _rows_from_upload(file_storage):
             yield {headers[i]: values[i] if i < len(values) else '' for i in range(len(headers))}
         return
     text = data.decode('utf-8-sig', errors='ignore')
-    for row in csv.DictReader(io.StringIO(text)):
-        yield row
+    yield from csv.DictReader(io.StringIO(text))
 
 
 def register_data_ingest(app, db_path):
@@ -146,19 +143,19 @@ def register_data_ingest(app, db_path):
             flash('فایل CSV/XLSX انتخاب نشده.', 'error')
             return redirect(url_for('campaigns_hub'))
 
-        rows = list(_rows_from_upload(upload))
-        if not rows:
+        iterator = iter(_rows_from_upload(upload))
+        first = next(iterator, None)
+        if not first:
             flash('فایل خالی است.', 'error')
             return redirect(url_for('campaigns_hub'))
-        headers = list(rows[0].keys())
-        hm = _header_map(headers)
+        hm = _header_map(list(first.keys()))
         if 'business_name' not in hm:
             flash('ستون نام کسب‌وکار پیدا نشد.', 'error')
             return redirect(url_for('campaigns_hub'))
 
         conn = db()
         imported = skipped = no_mobile = auto_mapped = 0
-        for idx, row in enumerate(rows):
+        for row in chain([first], iterator):
             name = str(row.get(hm['business_name']) or '').strip()
             category = str(row.get(hm.get('category','')) or '').strip() if hm.get('category') else ''
             vertical = default_vertical or detect_vertical(category, name)
@@ -204,6 +201,8 @@ def register_data_ingest(app, db_path):
                 )
             )
             imported += 1
+            if imported % 1000 == 0:
+                conn.commit()
         conn.commit(); conn.close()
         flash(f'{imported} لید وارد شد؛ {skipped} رد/تکراری؛ {no_mobile} مورد فقط تماس تلفنی؛ {auto_mapped} مورد صنف خودکار تشخیص داده شد.', 'success')
         return redirect(url_for('campaigns_hub'))
