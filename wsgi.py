@@ -7,8 +7,8 @@ from campaign_tools import register_campaign_tools
 from data_ingest import register_data_ingest
 from outreach import register_outreach
 
-# Real business-database exports can be large XLSX files.
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+# Real business-database exports can contain hundreds of thousands of rows.
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 register_capture(app, DB_PATH)
 register_exports(app, DB_PATH)
