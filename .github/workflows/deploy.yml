@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 concurrency:
   group: ppos-production
   cancel-in-progress: true
@@ -14,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to production server
+        id: server
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.HOST }}
@@ -118,3 +123,35 @@ jobs:
             systemctl reload nginx
 
             echo "PPOS deployment complete"
+
+      - name: Check public domain
+        id: public
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          for i in {1..6}; do
+            if curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/ >/dev/null; then
+              echo "Public health check passed"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Public health check failed"
+          exit 1
+
+      - name: Report deployment status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const server = '${{ steps.server.outcome }}';
+            const publicHealth = '${{ steps.public.outcome }}';
+            const icon = server === 'success' && publicHealth === 'success' ? '✅' : (server === 'success' ? '⚠️' : '❌');
+            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public HTTPS: **${publicHealth}**\n- URL: https://ppos.smarbiz.sbs\n\n${server === 'success' && publicHealth !== 'success' ? 'The app passed its on-server self-test, but the public hostname is still unreachable. Check DNS/SSL.' : ''}`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 1,
+              body
+            });
