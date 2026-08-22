@@ -54,12 +54,18 @@ jobs:
             assert c.get('/').status_code == 200
             assert len(VERTICALS) >= 30, f'Expected 30+ verticals, got {len(VERTICALS)}'
             assert len(CAMPAIGN_ORDER) == len(VERTICALS)
+            health = c.get('/health/campaigns')
+            assert health.status_code == 200
+            assert health.get_json()['vertical_count'] == 30
+            assert health.get_json()['ab_ready'] is True
+            assert health.get_json()['demo_ready'] is True
             for key, info in VERTICALS.items():
                 assert info.get('label') and info.get('product') and info.get('price')
                 assert len(info.get('hooks') or []) >= 2, f'{key} needs A/B hooks'
                 assert len(info.get('questions') or []) == 3, f'{key} needs 3 demo questions'
             routes = {r.rule for r in app.url_map.iter_rules()}
             required = {
+                '/health/campaigns',
                 '/admin/campaigns',
                 '/admin/campaigns/import',
                 '/admin/campaigns/template.csv',
@@ -142,6 +148,7 @@ jobs:
 
             sleep 2
             curl -fsS http://127.0.0.1:8080/ >/dev/null
+            curl -fsS http://127.0.0.1:8080/health/campaigns | grep -q '"vertical_count":30'
             systemctl is-active --quiet ppos
 
             certbot --nginx -d ppos.smarbiz.sbs --non-interactive --agree-tos --register-unsafely-without-email --redirect || true
@@ -149,20 +156,21 @@ jobs:
 
             echo "PPOS deployment complete"
 
-      - name: Check public domain
+      - name: Check public campaign engine
         id: public
         if: always()
         continue-on-error: true
         shell: bash
         run: |
           for i in {1..6}; do
-            if curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/ >/dev/null; then
-              echo "Public health check passed"
+            BODY=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/campaigns || true)
+            if echo "$BODY" | grep -q '"vertical_count":30' && echo "$BODY" | grep -q '"ab_ready":true' && echo "$BODY" | grep -q '"demo_ready":true'; then
+              echo "Public 30-vertical campaign health check passed"
               exit 0
             fi
             sleep 10
           done
-          echo "Public health check failed"
+          echo "Public campaign health check failed"
           exit 1
 
       - name: Report deployment status
@@ -173,7 +181,7 @@ jobs:
             const server = '${{ steps.server.outcome }}';
             const publicHealth = '${{ steps.public.outcome }}';
             const icon = server === 'success' && publicHealth === 'success' ? '✅' : (server === 'success' ? '⚠️' : '❌');
-            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public HTTPS: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- A/B hooks: **validated**\n- Demo questions: **validated**\n- URL: https://ppos.smarbiz.sbs\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n\n${server === 'success' && publicHealth !== 'success' ? 'The app passed its on-server self-test, but the public hostname is still unreachable. Check DNS/SSL.' : ''}`;
+            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public 30-vertical engine: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- A/B hooks: **validated**\n- Demo questions: **validated**\n- URL: https://ppos.smarbiz.sbs\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Health: https://ppos.smarbiz.sbs/health/campaigns\n\n${server === 'success' && publicHealth !== 'success' ? 'The app passed its on-server self-test, but the public campaign engine health check is not yet passing.' : ''}`;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
