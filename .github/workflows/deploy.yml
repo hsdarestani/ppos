@@ -41,6 +41,18 @@ jobs:
             .venv/bin/pip install -q -r requirements.txt
             mkdir -p /opt/ppos/data
 
+            .venv/bin/python -m py_compile app.py capture.py wsgi.py
+            .venv/bin/python - <<'PY'
+            from wsgi import app
+            c = app.test_client()
+            assert c.get('/').status_code == 200
+            routes = {r.rule for r in app.url_map.iter_rules()}
+            required = {'/admin/campaign/realestate', '/api/realestate/<slug>/lead', '/p/<slug>'}
+            missing = required - routes
+            assert not missing, f'Missing routes: {missing}'
+            print('PPOS application self-test passed')
+            PY
+
             if [ ! -f /etc/ppos.env ]; then
               echo "SECRET_KEY=$(openssl rand -hex 32)" > /etc/ppos.env
               chmod 600 /etc/ppos.env
@@ -57,7 +69,7 @@ jobs:
             WorkingDirectory=/opt/ppos
             EnvironmentFile=/etc/ppos.env
             Environment=PORT=8080
-            ExecStart=/opt/ppos/.venv/bin/gunicorn --workers 2 --threads 4 --timeout 60 --bind 127.0.0.1:8080 app:app
+            ExecStart=/opt/ppos/.venv/bin/gunicorn --workers 2 --threads 4 --timeout 60 --bind 127.0.0.1:8080 wsgi:app
             Restart=always
             RestartSec=3
 
@@ -100,6 +112,7 @@ jobs:
 
             sleep 2
             curl -fsS http://127.0.0.1:8080/ >/dev/null
+            systemctl is-active --quiet ppos
 
             certbot --nginx -d ppos.smarbiz.sbs --non-interactive --agree-tos --register-unsafely-without-email --redirect || true
             systemctl reload nginx
