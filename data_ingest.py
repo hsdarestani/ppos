@@ -16,12 +16,12 @@ from verticals import VERTICALS
 PERSIAN_DIGITS = str.maketrans('۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', '01234567890123456789')
 
 HEADER_ALIASES = {
-    'business_name': ['business_name','name','نام کسب و کار','نام کسب‌وکار','نام فروشگاه','نام مرکز','نام واحد','واحد صنفی','نام واحد صنفی'],
+    'business_name': ['business_name','name','نام کسب و کار','نام کسب‌وکار','نام فروشگاه','نام مرکز','نام فروشگاه یا مرکز','نام واحد','واحد صنفی','نام واحد صنفی'],
     'mobile': ['mobile','phone','موبایل','موبايل','شماره موبایل','شماره موبايل','شماره همراه','تلفن همراه'],
     'landline': ['landline','fixed_phone','telephone','تلفن','تلفن ثابت','شماره ثابت'],
     'city': ['city','شهر','شهرستان'],
     'address': ['address','آدرس','ادرس','آدرس پستی','نشانی'],
-    'category': ['category','guild','vertical','صنف','نوع صنف','رسته','دسته بندی','دسته‌بندی','گروه شغلی'],
+    'category': ['category','guild','vertical','صنف','نوع صنف','تفکیک صنف','رسته','دسته بندی','دسته‌بندی','گروه شغلی'],
     'owner': ['owner','owner_name','نام مسئول','نام فرد مسئول','مدیر','نام مدیر'],
     'instagram': ['instagram','اینستاگرام','اینستا'],
     'logo_url': ['logo_url','logo','لوگو'],
@@ -88,8 +88,9 @@ def _header_map(headers):
     out = {}
     for target, aliases in HEADER_ALIASES.items():
         for alias in aliases:
-            if _canon(alias) in normalized:
-                out[target] = normalized[_canon(alias)]
+            key = _canon(alias)
+            if key in normalized:
+                out[target] = normalized[key]
                 break
     return out
 
@@ -105,17 +106,17 @@ def detect_vertical(category, name=''):
 
 def _rows_from_upload(file_storage):
     filename = (file_storage.filename or '').lower()
-    data = file_storage.read()
+    file_storage.stream.seek(0)
     if filename.endswith('.xlsx'):
-        wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+        wb = load_workbook(file_storage.stream, read_only=True, data_only=True)
         ws = wb.active
         iterator = ws.iter_rows(values_only=True)
         headers = [str(x or '').strip() for x in next(iterator, [])]
         for values in iterator:
             yield {headers[i]: values[i] if i < len(values) else '' for i in range(len(headers))}
         return
-    text = data.decode('utf-8-sig', errors='ignore')
-    yield from csv.DictReader(io.StringIO(text))
+    wrapper = io.TextIOWrapper(file_storage.stream, encoding='utf-8-sig', errors='ignore', newline='')
+    yield from csv.DictReader(wrapper)
 
 
 def register_data_ingest(app, db_path):
