@@ -52,11 +52,12 @@ jobs:
             .venv/bin/pip install -q -r requirements.txt
             mkdir -p /opt/ppos/data
 
-            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py db_optimizations.py wsgi.py
+            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py db_optimizations.py vendor_compat.py wsgi.py
             .venv/bin/python - <<'PY'
-            from wsgi import app
+            import sqlite3
+            from wsgi import app, DB_PATH
             from verticals import VERTICALS, CAMPAIGN_ORDER
-            from data_ingest import _header_map, detect_vertical, _normalize_mobile
+            from data_ingest import _header_map, detect_vertical, _normalize_mobile, _normalize_phone
             c = app.test_client()
             assert c.get('/').status_code == 200
             assert len(VERTICALS) == 30 and len(CAMPAIGN_ORDER) == 30
@@ -65,14 +66,27 @@ jobs:
             outreach = c.get('/health/outreach').get_json()
             assert outreach['ok'] is True and set(outreach['providers']) == {'ippanel','kavenegar'}
             assert app.config['MAX_CONTENT_LENGTH'] >= 100 * 1024 * 1024
+
             headers = ['نام فروشگاه یا مرکز','تفکیک صنف','شماره موبایل','تلفن ثابت','آدرس پستی','نام فرد مسئول']
             hm = _header_map(headers)
             assert hm['business_name'] == 'نام فروشگاه یا مرکز'
             assert hm['category'] == 'تفکیک صنف'
             assert hm['mobile'] == 'شماره موبایل'
-            assert detect_vertical('نمایشگاه اتومبیل') == 'auto'
-            assert detect_vertical('آرایش زنانه') == 'beauty'
-            assert _normalize_mobile('۰۹۱۲۱۲۳۴۵۶۷') == '09121234567'
+
+            google_headers = ['title','category','phone','full_address','website','rating','reviews_count','place_id','latitude','longitude','google_maps_url']
+            ghm = _header_map(google_headers)
+            for required_google in ['business_name','category','phone_any','address','website','rating','reviews','place_id','latitude','longitude','maps_url']:
+                assert required_google in ghm, f'Google Maps header missing: {required_google}'
+            assert detect_vertical('Beauty salon') == 'beauty'
+            assert detect_vertical('Real estate agency') == 'realestate'
+            assert detect_vertical('Auto repair shop') == 'repair'
+            assert _normalize_mobile('+98 912 123 4567') == '09121234567'
+            assert _normalize_phone('+98 21 1234 5678').startswith('021')
+
+            conn = sqlite3.connect(DB_PATH)
+            assert conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='lead_external_ids'").fetchone()
+            conn.close()
+
             for key, info in VERTICALS.items():
                 assert info.get('label') and info.get('product') and info.get('price')
                 assert len(info.get('hooks') or []) >= 2
@@ -91,7 +105,7 @@ jobs:
             assert not missing, f'Missing routes: {missing}'
             for template in ['campaigns_hub.html','campaign_vertical.html','demo_vertical.html','merchant_vertical.html','activation_vertical.html','outreach.html','calls.html']:
                 app.jinja_env.get_template(template)
-            print('PPOS launch self-test passed')
+            print('PPOS launch self-test passed: 30 verticals + Google Maps import + outreach + Call Desk')
             PY
 
             if [ ! -f /etc/ppos.env ]; then
@@ -194,5 +208,5 @@ jobs:
             const server = '${{ steps.server.outcome }}';
             const publicHealth = '${{ steps.public.outcome }}';
             const icon = server === 'success' && publicHealth === 'success' ? '✅' : (server === 'success' ? '⚠️' : '❌');
-            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public campaign ops: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- Raw CSV/XLSX ingestion: **enabled (100 MB)**\n- Large DB indexes/WAL: **enabled**\n- SMS providers: **IPPanel + Kavenegar**\n- SMS default mode: **dry-run unless SMS_LIVE=1**\n- Presenter Call Desk: **enabled**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n- Call Desk: https://ppos.smarbiz.sbs/admin/calls\n`;
+            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public campaign ops: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- Google Maps CSV/XLSX import: **validated**\n- Place ID dedupe: **enabled**\n- Raw CSV/XLSX ingestion: **enabled (100 MB)**\n- Large DB indexes/WAL: **enabled**\n- SMS providers: **IPPanel + Kavenegar**\n- SMS default mode: **dry-run unless SMS_LIVE=1**\n- Presenter Call Desk: **enabled**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n- Call Desk: https://ppos.smarbiz.sbs/admin/calls\n`;
             await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: 1, body});
