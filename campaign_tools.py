@@ -16,6 +16,16 @@ def register_campaign_tools(app):
             return fn(*args, **kwargs)
         return wrapped
 
+    @app.get('/health/campaigns')
+    def campaigns_public_health():
+        return jsonify({
+            'ok': True,
+            'engine': 'ppos-all-vertical',
+            'vertical_count': len(VERTICALS),
+            'ab_ready': all(len(v.get('hooks') or []) >= 2 for v in VERTICALS.values()),
+            'demo_ready': all(len(v.get('questions') or []) == 3 for v in VERTICALS.values()),
+        })
+
     @app.get('/admin/campaigns/template.csv')
     @admin_only
     def campaigns_template_csv():
