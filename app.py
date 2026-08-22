@@ -30,6 +30,12 @@ VERTICALS = {
     "repair": {"label": "تعمیرگاه خودرو", "icon": "⚙", "product": "ثبت سرویس و برآورد اولیه"},
 }
 
+REAL_ESTATE_NEIGHBORHOODS = [
+    "سعادت‌آباد", "شهرک غرب", "پاسداران", "نیاوران", "زعفرانیه", "فرمانیه", "ولنجک", "الهیه",
+    "جردن", "ونک", "یوسف‌آباد", "گیشا", "مرزداران", "پونک", "جنت‌آباد", "صادقیه", "ستارخان",
+    "تهرانپارس", "نارمک", "حکیمیه",
+]
+
 
 def db():
     conn = sqlite3.connect(DB_PATH)
@@ -96,9 +102,10 @@ def init_db():
             ("اتو سرویس پارس", "repair", "09191234567", "تهران", "ستارخان", "pars_service"),
         ]
         for name, vertical, phone, city, address, insta in samples:
+            meta = {"campaign": "starter", "variant": "A"}
             conn.execute(
-                "INSERT INTO leads(slug,business_name,vertical,phone,city,address,instagram,created_at) VALUES(?,?,?,?,?,?,?,?)",
-                (slugify(name), name, vertical, phone, city, address, insta, now_iso()),
+                "INSERT INTO leads(slug,business_name,vertical,phone,city,address,instagram,meta_json,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                (slugify(name), name, vertical, phone, city, address, insta, json.dumps(meta, ensure_ascii=False), now_iso()),
             )
         conn.commit()
     conn.close()
@@ -155,10 +162,13 @@ def lead_to_dict(row):
 def record_event(lead_id, event_type, meta=None):
     conn = db()
     meta = meta or {}
-    conn.execute("INSERT INTO events(lead_id,event_type,meta_json,created_at) VALUES(?,?,?,?)", (lead_id, event_type, json.dumps(meta, ensure_ascii=False), now_iso()))
+    conn.execute(
+        "INSERT INTO events(lead_id,event_type,meta_json,created_at) VALUES(?,?,?,?)",
+        (lead_id, event_type, json.dumps(meta, ensure_ascii=False), now_iso()),
+    )
     if event_type == "open":
         conn.execute("UPDATE leads SET opens=opens+1,last_opened_at=? WHERE id=?", (now_iso(), lead_id))
-    elif event_type == "cta":
+    elif event_type in {"cta", "finder_used", "finder_completed", "booking_used", "lead_preview"}:
         conn.execute("UPDATE leads SET cta_clicks=cta_clicks+1 WHERE id=?", (lead_id,))
     elif event_type == "checkout":
         conn.execute("UPDATE leads SET checkout_clicks=checkout_clicks+1 WHERE id=?", (lead_id,))
@@ -217,12 +227,15 @@ def admin():
     conn.close()
     leads = [lead_to_dict(r) for r in rows]
     leads.sort(key=lambda x: (x["score"], x["last_opened_at"] or ""), reverse=True)
+    realestate = [x for x in leads if x["vertical"] == "realestate"]
     stats = {
         "total": len(leads),
         "opened": sum(1 for x in leads if x["opens"]),
         "hot": sum(1 for x in leads if x["score"] >= 50),
         "checkout": sum(x["checkout_clicks"] for x in leads),
         "events_today": events_today,
+        "realestate": len(realestate),
+        "realestate_opened": sum(1 for x in realestate if x["opens"]),
     }
     return render_template("admin.html", leads=leads, stats=stats, verticals=VERTICALS)
 
@@ -236,11 +249,16 @@ def new_lead():
     if not name or vertical not in VERTICALS:
         flash("نام کسب‌وکار و صنف معتبر لازم است.", "error")
         return redirect(url_for("admin"))
+    meta = {"campaign": form.get("campaign") or "manual", "variant": form.get("variant") or "A"}
     conn = db()
     conn.execute(
-        """INSERT INTO leads(slug,business_name,vertical,phone,city,address,instagram,logo_url,accent,created_at)
-           VALUES(?,?,?,?,?,?,?,?,?,?)""",
-        (slugify(name), name, vertical, form.get("phone"), form.get("city"), form.get("address"), form.get("instagram"), form.get("logo_url"), form.get("accent") or "#7c5cff", now_iso()),
+        """INSERT INTO leads(slug,business_name,vertical,phone,city,address,instagram,logo_url,accent,meta_json,created_at)
+           VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            slugify(name), name, vertical, form.get("phone"), form.get("city"), form.get("address"),
+            form.get("instagram"), form.get("logo_url"), form.get("accent") or "#194d3a",
+            json.dumps(meta, ensure_ascii=False), now_iso(),
+        ),
     )
     conn.commit()
     conn.close()
@@ -259,20 +277,73 @@ def import_csv():
     reader = csv.DictReader(io.StringIO(text))
     conn = db()
     imported = 0
+    skipped = 0
     for row in reader:
         name = (row.get("business_name") or row.get("name") or "").strip()
         vertical = (row.get("vertical") or "realestate").strip()
+        phone = (row.get("phone") or "").strip()
         if not name or vertical not in VERTICALS:
+            skipped += 1
             continue
+        duplicate = conn.execute(
+            "SELECT id FROM leads WHERE business_name=? AND COALESCE(phone,'')=? LIMIT 1", (name, phone)
+        ).fetchone()
+        if duplicate:
+            skipped += 1
+            continue
+        meta = {
+            "campaign": (row.get("campaign") or "csv").strip(),
+            "variant": (row.get("variant") or ("A" if imported % 2 == 0 else "B")).strip(),
+            "source": (row.get("source") or "").strip(),
+        }
         conn.execute(
-            """INSERT INTO leads(slug,business_name,vertical,phone,city,address,instagram,logo_url,created_at)
-               VALUES(?,?,?,?,?,?,?,?,?)""",
-            (slugify(name), name, vertical, row.get("phone"), row.get("city"), row.get("address"), row.get("instagram"), row.get("logo_url"), now_iso()),
+            """INSERT INTO leads(slug,business_name,vertical,phone,city,address,instagram,logo_url,accent,meta_json,created_at)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                slugify(name), name, vertical, phone, row.get("city"), row.get("address"), row.get("instagram"),
+                row.get("logo_url"), row.get("accent") or "#194d3a", json.dumps(meta, ensure_ascii=False), now_iso(),
+            ),
         )
         imported += 1
     conn.commit()
     conn.close()
-    flash(f"{imported} لید وارد و دموها ساخته شد.", "success")
+    flash(f"{imported} لید وارد شد؛ {skipped} ردیف نامعتبر/تکراری رد شد.", "success")
+    return redirect(url_for("admin"))
+
+
+@app.post("/admin/seed-realestate")
+@admin_required
+def seed_realestate():
+    """Create 100 clearly-marked test leads for campaign QA; no real contact data is fabricated."""
+    conn = db()
+    existing = conn.execute("SELECT COUNT(*) c FROM leads WHERE meta_json LIKE '%\"test\": true%'").fetchone()["c"]
+    if existing >= 100:
+        conn.close()
+        flash("۱۰۰ لید تستی قبلاً ساخته شده‌اند.", "success")
+        return redirect(url_for("admin"))
+    prefixes = ["آریا", "پارس", "کاج", "خانه", "مانا", "سپهر", "ویستا", "راد", "رویال", "آکام"]
+    created = 0
+    for i in range(100):
+        neighborhood = REAL_ESTATE_NEIGHBORHOODS[i % len(REAL_ESTATE_NEIGHBORHOODS)]
+        name = f"دمو املاک {prefixes[i % len(prefixes)]} {i + 1:03d}"
+        meta = {
+            "test": True,
+            "campaign": "RE-100-MVP",
+            "variant": "A" if i % 2 == 0 else "B",
+            "neighborhood": neighborhood,
+        }
+        conn.execute(
+            """INSERT INTO leads(slug,business_name,vertical,phone,city,address,accent,meta_json,created_at)
+               VALUES(?,?,?,?,?,?,?,?,?)""",
+            (
+                slugify(name), name, "realestate", "", "تهران", neighborhood, "#194d3a",
+                json.dumps(meta, ensure_ascii=False), now_iso(),
+            ),
+        )
+        created += 1
+    conn.commit()
+    conn.close()
+    flash(f"{created} لید تستی برای A/B و QA ساخته شد. برای ارسال واقعی، CSV شماره‌های واقعی را از پنل وارد کن.", "success")
     return redirect(url_for("admin"))
 
 
@@ -287,7 +358,14 @@ def lead_detail(lead_id):
         return "Not found", 404
     lead = lead_to_dict(row)
     demo_url = request.url_root.rstrip("/") + url_for("demo", slug=lead["slug"])
-    sms = f"{lead['business_name']}، نسخه اختصاصی {lead['vertical_info']['product']} شما آماده شده. با اسم و اطلاعات خودتون ببینید: {demo_url}"
+    if lead["vertical"] == "realestate":
+        variant = lead["meta"].get("variant", "A")
+        if variant == "B":
+            sms = f"{lead['business_name']}، یک صفحه جذب مشتری ملکی با نام خودتون آماده کردیم؛ مشتری بودجه و منطقه رو وارد می‌کنه و لید مستقیم برای شما میاد: {demo_url}"
+        else:
+            sms = f"{lead['business_name']}، فایل‌یاب اختصاصی شما با نام و اطلاعات خودتون آماده‌ست. قبل از فعال‌سازی ببینید مشتری چطور درخواست ملک ثبت می‌کنه: {demo_url}"
+    else:
+        sms = f"{lead['business_name']}، نسخه اختصاصی {lead['vertical_info']['product']} شما آماده شده. با اسم و اطلاعات خودتون ببینید: {demo_url}"
     return render_template("lead.html", lead=lead, events=events, demo_url=demo_url, sms=sms)
 
 
@@ -300,6 +378,8 @@ def demo(slug):
         return render_template("not_found.html"), 404
     lead = lead_to_dict(row)
     record_event(lead["id"], "open", {"ua": request.headers.get("User-Agent", "")[:160]})
+    if lead["vertical"] == "realestate":
+        return render_template("demo_realestate.html", lead=lead)
     return render_template("demo.html", lead=lead)
 
 
@@ -320,7 +400,11 @@ def api_event():
     payload = request.get_json(silent=True) or {}
     slug = payload.get("slug")
     event_type = payload.get("type")
-    if event_type not in {"cta", "engaged_15", "engaged_30", "scroll_50", "scroll_90", "finder_used", "booking_used"}:
+    allowed = {
+        "cta", "engaged_15", "engaged_30", "scroll_50", "scroll_90", "finder_used", "booking_used",
+        "finder_started", "finder_completed", "lead_preview", "price_viewed", "phone_mock_submit",
+    }
+    if event_type not in allowed:
         return jsonify({"ok": False}), 400
     conn = db()
     row = conn.execute("SELECT id FROM leads WHERE slug=?", (slug,)).fetchone()
