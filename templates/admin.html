@@ -1,1 +1,68 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PPOS Admin</title><link rel="stylesheet" href="/static/style.css"></head><body class="admin-body"><aside class="sidebar"><a class="brand" href="/"><span class="brand-mark">P</span><span>PPOS</span></a><nav><a class="active" href="/admin">داشبورد لیدها</a><a href="#campaign">کمپین املاک</a><a href="#new">ساخت دمو</a><a href="#import">ورود CSV</a></nav><a class="logout" href="/logout">خروج</a></aside><main class="admin-main"><header class="admin-head"><div><span class="eyebrow">OUTBOUND COMMAND CENTER</span><h1>لیدهای امروز</h1><p>اول با کسانی تماس بگیر که خودشان علاقه نشان داده‌اند.</p></div><button class="btn primary" onclick="document.getElementById('newModal').showModal()">+ ساخت دمو</button></header>{% with messages=get_flashed_messages(with_categories=true) %}{% for category,msg in messages %}<div class="flash {{category}}">{{msg}}</div>{% endfor %}{% endwith %}<section class="stats"><article><span>کل لیدها</span><strong>{{stats.total}}</strong></article><article><span>دمو دیده‌اند</span><strong>{{stats.opened}}</strong></article><article><span>Hot Leads</span><strong>{{stats.hot}}</strong></article><article><span>Checkout Intent</span><strong>{{stats.checkout}}</strong></article></section><section class="panel" id="campaign"><div class="panel-title"><div><h2>کمپین MVP املاک</h2><p>برای تست ۱۰۰ لید، A/B پیامک و سناریوی تماس آماده است.</p></div><div style="display:flex;gap:8px;align-items:center"><span class="chip">{{stats.realestate}} دمو املاک</span><span class="chip">{{stats.realestate_opened}} بازدیدکننده</span></div></div><div class="feature-band" style="margin:0"><div><small>01</small><h3>دیتابیس واقعی</h3><p>CSV کسب‌وکارها را وارد کن؛ داده داخل SQLite سرور می‌ماند و وارد Git نمی‌شود.</p></div><div><small>02</small><h3>دموی شخصی</h3><p>برای هر ردیف لینک فایل‌یاب با نام و اطلاعات همان املاک ساخته می‌شود.</p></div><div><small>03</small><h3>تماس فقط با Hotها</h3><p>بازدید، فایل‌یابی، دیدن قیمت و Checkout به Hot Score تبدیل می‌شود.</p></div></div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px"><form action="/admin/seed-realestate" method="post"><button class="btn ghost" type="submit">ساخت ۱۰۰ لید تستی A/B</button></form><button class="btn ghost" onclick="document.getElementById('newModal').showModal()">دموی املاک جدید</button></div></section><section class="panel"><div class="panel-title"><div><h2>اولویت تماس</h2><p>{{stats.events_today}} رفتار امروز ثبت شده</p></div><label class="search"><input id="leadSearch" placeholder="جستجو نام، شهر، تلفن..."></label></div><div class="lead-table"><div class="thead"><span>کسب‌وکار</span><span>صنف</span><span>وضعیت</span><span>رفتار</span><span>امتیاز</span><span></span></div>{% for lead in leads %}<a class="lead-row" data-search="{{lead.business_name}} {{lead.city}} {{lead.phone}} {{lead.vertical_info.label}}" href="/admin/lead/{{lead.id}}"><div><b>{{lead.business_name}}</b><small>{{lead.city or '—'}} · {{lead.phone or 'بدون تلفن'}}{% if lead.meta.get('test') %} · TEST{% endif %}</small></div><span><i class="mini-icon">{{lead.vertical_info.icon}}</i>{{lead.vertical_info.label}}{% if lead.meta.get('variant') %}<small>Variant {{lead.meta.get('variant')}}</small>{% endif %}</span><span class="status {{lead.status}}">{{ {'new':'جدید','sent':'ارسال شد','contacted':'تماس شد','qualified':'واجد شرایط','won':'فروش','lost':'از دست رفت'}[lead.status] }}</span><span><b>{{lead.opens}}</b> بازدید · <b>{{lead.cta_clicks}}</b> تعامل · <b>{{lead.checkout_clicks}}</b> خرید</span><span><strong class="score {% if lead.score>=50 %}hot{% endif %}">{{lead.score}}</strong></span><span class="arrow">←</span></a>{% endfor %}</div></section><section class="panel import-panel" id="import"><div><h2>ورود دیتابیس واقعی صنف</h2><p>ستون‌ها: business_name, vertical, phone, city, address, instagram, logo_url, campaign, variant, source</p><small style="color:#777e8d">برای املاک، vertical را realestate بگذار. اگر variant خالی باشد A/B خودکار تقسیم می‌شود.</small></div><form action="/admin/import" method="post" enctype="multipart/form-data"><input type="file" name="file" accept=".csv" required><button class="btn ghost" type="submit">آپلود CSV</button></form></section></main><dialog id="newModal"><form method="post" action="/admin/new" class="modal-form"><button class="x" type="button" onclick="this.closest('dialog').close()">×</button><span class="eyebrow">NEW PERSONALIZED DEMO</span><h2>ساخت دموی جدید</h2><div class="field-grid"><label>نام کسب‌وکار<input name="business_name" required placeholder="مثلاً املاک آریا"></label><label>صنف<select name="vertical">{% for key,item in verticals.items() %}<option value="{{key}}">{{item.label}}</option>{% endfor %}</select></label><label>موبایل<input name="phone" placeholder="09..."></label><label>شهر<input name="city" value="تهران" placeholder="تهران"></label><label class="wide">آدرس / محله<input name="address" placeholder="سعادت‌آباد، میدان کاج"></label><label>اینستاگرام<input name="instagram" placeholder="aria_home"></label><label>لوگو URL<input name="logo_url" placeholder="https://..."></label><label>Campaign<input name="campaign" value="RE-100-MVP"></label><label>Variant<select name="variant"><option value="A">A — فایل‌یاب آماده</option><option value="B">B — جذب لید ملکی</option></select></label></div><button class="btn primary wide-btn">ساخت فوری دمو</button></form></dialog><script>const q=document.getElementById('leadSearch');q&&q.addEventListener('input',e=>{const v=e.target.value.trim().toLowerCase();document.querySelectorAll('.lead-row').forEach(r=>r.style.display=r.dataset.search.toLowerCase().includes(v)?'grid':'none')});</script></body></html>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PPOS Admin</title><link rel="stylesheet" href="/static/style.css"></head>
+<body class="admin-body">
+<aside class="sidebar">
+  <a class="brand" href="/"><span class="brand-mark">P</span><span>PPOS</span></a>
+  <nav>
+    <a class="active" href="/admin">داشبورد لیدها</a>
+    <a href="/admin/campaign/realestate">A/B کمپین املاک</a>
+    <a href="#new">ساخت دمو</a>
+    <a href="#import">ورود CSV</a>
+  </nav>
+  <a class="logout" href="/logout">خروج</a>
+</aside>
+<main class="admin-main">
+  <header class="admin-head">
+    <div><span class="eyebrow">OUTBOUND COMMAND CENTER</span><h1>لیدهای فروش</h1><p>اول با کسی تماس بگیر که دمو را دیده و رفتار خرید نشان داده.</p></div>
+    <div style="display:flex;gap:9px"><a class="btn ghost" href="/admin/campaign/realestate">نتیجه A/B</a><button class="btn primary" onclick="document.getElementById('newModal').showModal()">+ ساخت دمو</button></div>
+  </header>
+  {% with messages=get_flashed_messages(with_categories=true) %}{% for category,msg in messages %}<div class="flash {{category}}">{{msg}}</div>{% endfor %}{% endwith %}
+  <section class="stats">
+    <article><span>کل Prospects</span><strong>{{stats.total}}</strong></article>
+    <article><span>دمو دیده‌اند</span><strong>{{stats.opened}}</strong></article>
+    <article><span>Hot Leads</span><strong>{{stats.hot}}</strong></article>
+    <article><span>Checkout Intent</span><strong>{{stats.checkout}}</strong></article>
+  </section>
+
+  <section class="panel" id="campaign">
+    <div class="panel-title">
+      <div><h2>کمپین MVP املاک</h2><p>۱۰۰ لید → دو Hook پیامکی → دمو اختصاصی → تماس فقط با Hotها.</p></div>
+      <div style="display:flex;gap:8px;align-items:center"><span class="chip">{{stats.realestate}} دمو</span><span class="chip">{{stats.realestate_opened}} بازدید</span></div>
+    </div>
+    <div class="feature-band" style="margin:0">
+      <div><small>01 / DATA</small><h3>CSV واقعی</h3><p>دیتابیس کسب‌وکار روی سرور می‌ماند؛ داخل Git عمومی قرار نمی‌گیرد.</p></div>
+      <div><small>02 / DEMO</small><h3>برای هر املاک یک نسخه</h3><p>اسم، محله، برند و لینک فایل‌یاب مخصوص همان prospect.</p></div>
+      <div><small>03 / SALES</small><h3>Call Queue رفتاری</h3><p>Open، Finder، Price و Checkout تعیین می‌کنند به چه کسی اول زنگ بزنید.</p></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
+      <a class="btn primary" href="/admin/campaign/realestate">باز کردن داشبورد آزمایش</a>
+      <form action="/admin/seed-realestate" method="post"><button class="btn ghost" type="submit">ساخت ۱۰۰ لید تستی A/B</button></form>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-title"><div><h2>اولویت تماس</h2><p>{{stats.events_today}} رفتار امروز ثبت شده</p></div><label class="search"><input id="leadSearch" placeholder="جستجو نام، شهر، تلفن..."></label></div>
+    <div class="lead-table">
+      <div class="thead"><span>کسب‌وکار</span><span>صنف / Variant</span><span>وضعیت</span><span>رفتار</span><span>Score</span><span></span></div>
+      {% for lead in leads %}
+      <a class="lead-row" data-search="{{lead.business_name}} {{lead.city}} {{lead.phone}} {{lead.vertical_info.label}}" href="/admin/lead/{{lead.id}}">
+        <div><b>{{lead.business_name}}</b><small>{{lead.city or '—'}} · {{lead.phone or 'بدون تلفن'}}{% if lead.meta.get('test') %} · TEST{% endif %}</small></div>
+        <span><i class="mini-icon">{{lead.vertical_info.icon}}</i>{{lead.vertical_info.label}}{% if lead.meta.get('variant') %}<small>Variant {{lead.meta.get('variant')}}</small>{% endif %}</span>
+        <span class="status {{lead.status}}">{{ {'new':'جدید','sent':'ارسال شد','contacted':'تماس شد','qualified':'واجد شرایط','won':'فروش','lost':'از دست رفت'}[lead.status] }}</span>
+        <span><b>{{lead.opens}}</b> Open · <b>{{lead.cta_clicks}}</b> Engage · <b>{{lead.checkout_clicks}}</b> Checkout</span>
+        <span><strong class="score {% if lead.score>=50 %}hot{% endif %}">{{lead.score}}</strong></span><span class="arrow">←</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel import-panel" id="import">
+    <div><h2>ورود دیتابیس واقعی</h2><p>ستون‌ها: business_name, vertical, phone, city, address, instagram, logo_url, campaign, variant, source</p><small style="color:#777e8d">برای املاک vertical=realestate. اگر variant خالی باشد A/B خودکار تقسیم می‌شود.</small></div>
+    <form action="/admin/import" method="post" enctype="multipart/form-data"><input type="file" name="file" accept=".csv" required><button class="btn ghost" type="submit">آپلود CSV</button></form>
+  </section>
+</main>
+
+<dialog id="newModal"><form method="post" action="/admin/new" class="modal-form"><button class="x" type="button" onclick="this.closest('dialog').close()">×</button><span class="eyebrow">NEW PERSONALIZED DEMO</span><h2>ساخت دموی جدید</h2><div class="field-grid"><label>نام کسب‌وکار<input name="business_name" required placeholder="مثلاً املاک آریا"></label><label>صنف<select name="vertical">{% for key,item in verticals.items() %}<option value="{{key}}">{{item.label}}</option>{% endfor %}</select></label><label>موبایل<input name="phone" placeholder="09..."></label><label>شهر<input name="city" value="تهران"></label><label class="wide">آدرس / محله<input name="address" placeholder="سعادت‌آباد، میدان کاج"></label><label>اینستاگرام<input name="instagram" placeholder="aria_home"></label><label>لوگو URL<input name="logo_url" placeholder="https://..."></label><label>Campaign<input name="campaign" value="RE-100-MVP"></label><label>Variant<select name="variant"><option value="A">A — فایل‌یاب آماده</option><option value="B">B — جذب لید ملکی</option></select></label></div><button class="btn primary wide-btn">ساخت فوری دمو</button></form></dialog>
+<script>const q=document.getElementById('leadSearch');q&&q.addEventListener('input',e=>{const v=e.target.value.trim().toLowerCase();document.querySelectorAll('.lead-row').forEach(r=>r.style.display=r.dataset.search.toLowerCase().includes(v)?'grid':'none')});</script>
+</body></html>
