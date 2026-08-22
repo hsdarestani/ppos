@@ -46,13 +46,19 @@ jobs:
             .venv/bin/pip install -q -r requirements.txt
             mkdir -p /opt/ppos/data
 
-            .venv/bin/python -m py_compile app.py capture.py wsgi.py
+            .venv/bin/python -m py_compile app.py capture.py exports.py wsgi.py
             .venv/bin/python - <<'PY'
             from wsgi import app
             c = app.test_client()
             assert c.get('/').status_code == 200
             routes = {r.rule for r in app.url_map.iter_rules()}
-            required = {'/admin/campaign/realestate', '/api/realestate/<slug>/lead', '/p/<slug>'}
+            required = {
+                '/admin/campaign/realestate',
+                '/admin/campaign/realestate/sms.csv',
+                '/admin/campaign/realestate/calls.csv',
+                '/api/realestate/<slug>/lead',
+                '/p/<slug>'
+            }
             missing = required - routes
             assert not missing, f'Missing routes: {missing}'
             print('PPOS application self-test passed')
