@@ -1,1 +1,125 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f1116"><title>{{lead.business_name}} — {{info.product}}</title><link rel="stylesheet" href="/static/campaign.css"></head><body class="demo-universal" style="--brand:{{lead.accent or '#5b4df5'}}"><div class="demo-frame"><header class="demo-top"><div class="demo-brand">{% if lead.logo_url %}<img src="{{lead.logo_url}}" alt="">{% else %}<span>{{lead.business_name[:1]}}</span>{% endif %}<div><b>{{lead.business_name}}</b><small>{{info.label}} · {{lead.city or 'ایران'}}</small></div></div>{% if lead.phone %}<a href="tel:{{lead.phone}}" data-cta>تماس</a>{% endif %}</header><main><section class="demo-hero"><div class="hero-copy"><span class="personalized">نسخه اختصاصی {{lead.business_name}}</span><h1>{{info.headline}}</h1><p>{{info.sub}}</p><div class="microproof"><span>بدون نصب اپ</span><span>کمتر از ۳۰ ثانیه</span><span>با برند خود شما</span></div></div><div class="flowcard" id="flowCard"><div class="flowhead"><div><small>{{info.product}}</small><strong>خودت تستش کن</strong></div><span class="online">فعال</span></div><div class="flowprogress"><i id="bar"></i></div>{% for q in info.questions %}<section class="qstep {% if loop.first %}active{% endif %}" data-step="{{loop.index}}" data-key="{{q[0]}}"><span class="stepno">مرحله {{loop.index}} از {{info.questions|length}}</span><h2>{{q[1]}}</h2><div class="answers">{% for option in q[2] %}<button type="button" class="answer {% if loop.first %}active{% endif %}" data-value="{{option}}">{{option}}</button>{% endfor %}</div><div class="stepactions">{% if not loop.first %}<button class="prev" type="button" data-prev="{{loop.index-1}}">برگشت</button>{% endif %}<button class="next" type="button" data-next="{{loop.index+1}}">{% if loop.last %}ادامه{% else %}مرحله بعد{% endif %}</button></div></section>{% endfor %}<section class="qstep" data-step="{{info.questions|length + 1}}"><span class="stepno">آخرین مرحله</span><h2>{{info.cta}}</h2><p class="flowhint">برای تکمیل این دموی واقعی، یک شماره تست وارد کن. شماره در پیش‌نمایش عمومی ماسک می‌شود.</p><label class="phonefield"><span>نام</span><input id="customerName" placeholder="مثلاً مهدی"></label><label class="phonefield"><span>موبایل</span><input id="customerPhone" inputmode="numeric" maxlength="11" placeholder="09xxxxxxxxx"></label><button class="capture" id="captureLead" type="button">{{info.cta}}</button><small id="captureMsg" class="capturemsg"></small></section></div></section><section class="merchant-effect"><div><span class="sectiontag">WHAT THE BUSINESS GETS</span><h2>این تعامل برای {{lead.business_name}} تبدیل به یک <em>لید آماده تماس</em> می‌شود.</h2><p>صاحب کسب‌وکار قبل از تماس می‌فهمد مشتری چه می‌خواهد و از کدام صفحه آمده.</p></div><div class="fake-inbox"><div class="inbox-title"><span></span><b>لید جدید برای {{lead.business_name}}</b><small>همین الان</small></div>{% for q in info.questions %}<div class="inbox-row"><span>{{q[1]}}</span><b id="mirror-{{q[0]}}">{{q[2][0]}}</b></div>{% endfor %}<div class="inbox-contact"><span>م</span><div><small>شماره مشتری</small><b>09•• ••• ••47</b></div><button>تماس</button></div></div></section><section class="ready-offer" id="offer"><span class="sectiontag">این دمو عمومی نیست</span><h2>همین نسخه برای <em>{{lead.business_name}}</em> آماده شده.</h2><p>بعد از فعال‌سازی، لینک اختصاصی، فرم جذب لید، گزارش بازدید و خروجی مشتری‌ها را دارید.</p><div class="pricebox"><div><small>فعال‌سازی نسخه کمپین</small><strong>{{info.price}} <i>تومان</i></strong></div><a href="/activate/{{lead.slug}}" data-cta>فعال‌سازی همین نسخه ←</a></div><div class="riskless"><span>بدون قرارداد بلندمدت</span><span>بدون نصب اپ</span><span>قابل شخصی‌سازی</span></div></section></main><footer><b>{{lead.business_name}}</b><span>{{lead.address or lead.city or ''}}</span><small>Personalized by PPOS</small></footer></div><script>window.PPOS={slug:{{lead.slug|tojson}},questions:{{info.questions|tojson}}};</script><script src="/static/campaign.js"></script></body></html>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="{{info.theme_primary or '#26313a'}}">
+  <title>{{lead.business_name}} | {{info.label}}</title>
+  <link rel="preconnect" href="https://images.pexels.com">
+  <link rel="stylesheet" href="/static/campaign.css">
+</head>
+<body class="site-demo" style="--brand:{{lead.accent or info.theme_primary}};--ink:{{info.theme_primary}};--soft:{{info.theme_soft}};--hero:url('{{info.hero_image}}')">
+<div class="site-shell">
+  <header class="site-nav">
+    <a class="site-identity" href="#top">
+      {% if lead.logo_url %}<img src="{{lead.logo_url}}" alt="{{lead.business_name}}">{% else %}<span>{{lead.business_name[:1]}}</span>{% endif %}
+      <div><strong>{{lead.business_name}}</strong><small>{{info.label}}{% if lead.city %} · {{lead.city}}{% endif %}</small></div>
+    </a>
+    <div class="site-nav-actions">
+      {% if lead.meta.get('google_rating') %}<span class="google-score"><b>★ {{lead.meta.get('google_rating')}}</b><small>{{lead.meta.get('google_reviews') or ''}} نظر</small></span>{% endif %}
+      {% if lead.phone %}<a class="nav-call" href="tel:{{lead.phone}}" data-cta>تماس مستقیم</a>{% endif %}
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="photo-hero">
+      <div class="photo-shade"></div>
+      <div class="photo-copy">
+        <span class="welcome-pill">{{info.hero_kicker}}</span>
+        <h1>{{info.headline}}</h1>
+        <p>{{info.sub}}</p>
+        <div class="hero-actions">
+          <a href="#request" class="hero-primary">{{info.cta}}</a>
+          {% if lead.phone %}<a href="tel:{{lead.phone}}" class="hero-secondary">تماس با مجموعه</a>{% endif %}
+        </div>
+        <div class="hero-facts">
+          {% if lead.city %}<span><small>شهر</small><b>{{lead.city}}</b></span>{% endif %}
+          {% if lead.meta.get('google_rating') %}<span><small>امتیاز گوگل</small><b>★ {{lead.meta.get('google_rating')}}</b></span>{% endif %}
+          <span><small>درخواست آنلاین</small><b>کمتر از یک دقیقه</b></span>
+        </div>
+      </div>
+      <div class="hero-business-card">
+        <span class="card-eyebrow">{{lead.business_name}}</span>
+        <strong>{{info.product}}</strong>
+        <p>برای شروع، فقط چند انتخاب کوتاه کافی است.</p>
+        <a href="#request">شروع درخواست ←</a>
+      </div>
+    </section>
+
+    <section class="request-section" id="request">
+      <div class="request-intro">
+        <span class="site-kicker">{{info.demo_kicker}}</span>
+        <h2>چند انتخاب کوتاه، بعدش هماهنگی با شما.</h2>
+        <p>لازم نیست فرم طولانی پر کنید. فقط چیزهایی که برای پاسخ بهتر لازم است را می‌پرسیم.</p>
+        <div class="quiet-points"><span>بدون نصب اپ</span><span>بدون ثبت‌نام</span><span>پاسخ مستقیم مجموعه</span></div>
+      </div>
+
+      <div class="flowcard premium-flow" id="flowCard">
+        <div class="flowhead"><div><small>{{lead.business_name}}</small><strong>درخواست آنلاین</strong></div><span class="online">پاسخ‌گو</span></div>
+        <div class="flowprogress"><i id="bar"></i></div>
+        {% for q in info.questions %}
+        <section class="qstep {% if loop.first %}active{% endif %}" data-step="{{loop.index}}" data-key="{{q[0]}}">
+          <span class="stepno">{{loop.index}} / {{info.questions|length}}</span>
+          <h2>{{q[1]}}</h2>
+          <div class="answers">{% for option in q[2] %}<button type="button" class="answer {% if loop.first %}active{% endif %}" data-value="{{option}}">{{option}}</button>{% endfor %}</div>
+          <div class="stepactions">{% if not loop.first %}<button class="prev" type="button" data-prev="{{loop.index-1}}">قبلی</button>{% endif %}<button class="next" type="button" data-next="{{loop.index+1}}">{% if loop.last %}ثبت درخواست{% else %}ادامه{% endif %}</button></div>
+        </section>
+        {% endfor %}
+        <section class="qstep" data-step="{{info.questions|length + 1}}">
+          <span class="stepno">مرحله آخر</span>
+          <h2>برای هماهنگی، شماره‌تان را بگذارید.</h2>
+          <p class="flowhint">اطلاعات شما فقط برای همین درخواست در اختیار {{lead.business_name}} قرار می‌گیرد.</p>
+          <label class="phonefield"><span>نام</span><input id="customerName" placeholder="نام شما"></label>
+          <label class="phonefield"><span>شماره موبایل</span><input id="customerPhone" inputmode="numeric" maxlength="11" placeholder="09xxxxxxxxx"></label>
+          <button class="capture" id="captureLead" type="button">{{info.cta}}</button>
+          <small id="captureMsg" class="capturemsg"></small>
+        </section>
+      </div>
+    </section>
+
+    <section class="place-story">
+      <div class="place-photo" role="img" aria-label="فضای مرتبط با {{info.label}}"></div>
+      <div class="place-copy">
+        <span class="site-kicker">{{lead.city or 'نزدیک شما'}}</span>
+        <h2>{{lead.business_name}}</h2>
+        <p>{{lead.address or 'برای آدرس دقیق و هماهنگی، با مجموعه تماس بگیرید.'}}</p>
+        {% if lead.meta.get('google_rating') %}<div class="rating-line"><b>★ {{lead.meta.get('google_rating')}}</b><span>بر اساس {{lead.meta.get('google_reviews') or 'نظرهای'}} گوگل</span></div>{% endif %}
+        <div class="place-links">
+          {% if lead.meta.get('website') %}<a href="{{lead.meta.get('website')}}" target="_blank" rel="noopener">وب‌سایت</a>{% endif %}
+          {% if lead.meta.get('google_maps_url') %}<a href="{{lead.meta.get('google_maps_url')}}" target="_blank" rel="noopener">مشاهده در Google Maps</a>{% endif %}
+          {% if lead.phone %}<a href="tel:{{lead.phone}}">{{lead.phone}}</a>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    {% if maps_embed_key and (lead.meta.get('google_place_id') or lead.address) %}
+    <section class="map-section">
+      <div class="map-copy"><span class="site-kicker">لوکیشن</span><h2>مسیریابی تا {{lead.business_name}}</h2><p>نقشه زنده از Google Maps؛ همیشه با آخرین داده‌ی نقشه نمایش داده می‌شود.</p></div>
+      <iframe loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.google.com/maps/embed/v1/place?key={{maps_embed_key}}&q={% if lead.meta.get('google_place_id') %}place_id:{{lead.meta.get('google_place_id')}}{% else %}{{(lead.address ~ ' ' ~ (lead.city or ''))|urlencode}}{% endif %}"></iframe>
+    </section>
+    {% endif %}
+
+    <section class="merchant-effect refined-effect">
+      <div><span class="site-kicker">برای صاحب {{lead.business_name}}</span><h2>هر درخواست، با نیاز دقیق مشتری وارد پنل شما می‌شود.</h2><p>به‌جای یک «فرم تماس» مبهم، قبل از تماس می‌دانید مشتری چه می‌خواهد و با چه اولویتی آمده است.</p></div>
+      <div class="fake-inbox">
+        <div class="inbox-title"><span></span><b>درخواست جدید</b><small>همین حالا</small></div>
+        {% for q in info.questions %}<div class="inbox-row"><span>{{q[1]}}</span><b id="mirror-{{q[0]}}">{{q[2][0]}}</b></div>{% endfor %}
+        <div class="inbox-contact"><span>م</span><div><small>شماره مشتری</small><b>09•• ••• ••47</b></div><button>تماس</button></div>
+      </div>
+    </section>
+
+    <section class="ready-offer refined-offer" id="offer">
+      <span class="site-kicker">نسخه اختصاصی شما</span>
+      <h2>{{info.offer_title}}</h2>
+      <p>نام، اطلاعات تماس، لوکیشن، ظاهر و مسیر درخواست برای {{lead.business_name}} شخصی‌سازی شده. قبل از فعال‌سازی هم می‌توانیم جزئیاتش را مطابق سلیقه شما تنظیم کنیم.</p>
+      <div class="pricebox"><div><small>راه‌اندازی این نسخه</small><strong>{{info.price}} <i>تومان</i></strong></div><a href="/activate/{{lead.slug}}" data-cta>می‌خوام فعالش کنم ←</a></div>
+      <div class="riskless"><span>بدون قرارداد بلندمدت</span><span>لینک اختصاصی</span><span>قابل ویرایش قبل از انتشار</span></div>
+    </section>
+  </main>
+
+  <footer class="site-footer"><div><b>{{lead.business_name}}</b><span>{{lead.address or lead.city or ''}}</span></div><small>نسخه اختصاصی آماده فعال‌سازی</small></footer>
+</div>
+<script>window.PPOS={slug:{{lead.slug|tojson}},questions:{{info.questions|tojson}}};</script>
+<script src="/static/campaign.js"></script>
+</body>
+</html>
