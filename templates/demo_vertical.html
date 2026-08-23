@@ -17,7 +17,8 @@
       <div><strong>{{lead.business_name}}</strong><small>{{info.label}}{% if lead.city %} · {{lead.city}}{% endif %}</small></div>
     </a>
     <div class="site-nav-actions">
-      {% if lead.meta.get('google_rating') %}<span class="google-score"><b>★ {{lead.meta.get('google_rating')}}</b><small>{{lead.meta.get('google_reviews') or ''}} نظر</small></span>{% endif %}
+      {% set grating = lead.meta.get('google_rating') or lead.meta.get('rating') %}{% set greviews = lead.meta.get('google_reviews') or lead.meta.get('reviews') %}
+      {% if grating %}<span class="google-score"><b>★ {{grating}}</b><small>{{greviews or ''}} نظر</small></span>{% endif %}
       {% if lead.phone %}<a class="nav-call" href="tel:{{lead.phone}}" data-cta>تماس مستقیم</a>{% endif %}
     </div>
   </header>
@@ -35,7 +36,7 @@
         </div>
         <div class="hero-facts">
           {% if lead.city %}<span><small>شهر</small><b>{{lead.city}}</b></span>{% endif %}
-          {% if lead.meta.get('google_rating') %}<span><small>امتیاز گوگل</small><b>★ {{lead.meta.get('google_rating')}}</b></span>{% endif %}
+          {% if grating %}<span><small>امتیاز گوگل</small><b>★ {{grating}}</b></span>{% endif %}
           <span><small>درخواست آنلاین</small><b>کمتر از یک دقیقه</b></span>
         </div>
       </div>
@@ -84,7 +85,7 @@
         <span class="site-kicker">{{lead.city or 'نزدیک شما'}}</span>
         <h2>{{lead.business_name}}</h2>
         <p>{{lead.address or 'برای آدرس دقیق و هماهنگی، با مجموعه تماس بگیرید.'}}</p>
-        {% if lead.meta.get('google_rating') %}<div class="rating-line"><b>★ {{lead.meta.get('google_rating')}}</b><span>بر اساس {{lead.meta.get('google_reviews') or 'نظرهای'}} گوگل</span></div>{% endif %}
+        {% if grating %}<div class="rating-line"><b>★ {{grating}}</b><span>بر اساس {{greviews or 'نظرهای'}} گوگل</span></div>{% endif %}
         <div class="place-links">
           {% if lead.meta.get('website') %}<a href="{{lead.meta.get('website')}}" target="_blank" rel="noopener">وب‌سایت</a>{% endif %}
           {% if lead.meta.get('google_maps_url') %}<a href="{{lead.meta.get('google_maps_url')}}" target="_blank" rel="noopener">مشاهده در Google Maps</a>{% endif %}
@@ -93,10 +94,11 @@
       </div>
     </section>
 
-    {% if maps_embed_key and (lead.meta.get('google_place_id') or lead.address) %}
+    {% set gpid = lead.meta.get('google_place_id') or lead.meta.get('place_id') %}
+    {% if maps_embed_key and (gpid or lead.address) %}
     <section class="map-section">
       <div class="map-copy"><span class="site-kicker">لوکیشن</span><h2>مسیریابی تا {{lead.business_name}}</h2><p>نقشه زنده از Google Maps؛ همیشه با آخرین داده‌ی نقشه نمایش داده می‌شود.</p></div>
-      <iframe loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.google.com/maps/embed/v1/place?key={{maps_embed_key}}&q={% if lead.meta.get('google_place_id') %}place_id:{{lead.meta.get('google_place_id')}}{% else %}{{(lead.address ~ ' ' ~ (lead.city or ''))|urlencode}}{% endif %}"></iframe>
+      <iframe loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.google.com/maps/embed/v1/place?key={{maps_embed_key}}&q={% if gpid %}place_id:{{gpid}}{% else %}{{(lead.address ~ ' ' ~ (lead.city or ''))|urlencode}}{% endif %}"></iframe>
     </section>
     {% endif %}
 
