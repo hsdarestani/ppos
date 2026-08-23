@@ -11,6 +11,9 @@ from flask import flash, jsonify, redirect, render_template, request, session, u
 from verticals import CAMPAIGN_ORDER, VERTICALS, get_vertical
 
 
+SUPPORTED_PROVIDERS = {'melipayamak', 'ippanel', 'kavenegar'}
+
+
 def register_outreach(app, db_path):
     def db():
         conn = sqlite3.connect(db_path)
@@ -68,8 +71,12 @@ def register_outreach(app, db_path):
 
     def normalize_mobile(value):
         raw = re.sub(r'\D','',str(value or ''))
-        if raw.startswith('98') and len(raw) == 12:
+        if raw.startswith('0098'):
+            raw = '0' + raw[4:]
+        elif raw.startswith('98') and len(raw) == 12:
             raw = '0' + raw[2:]
+        elif raw.startswith('9') and len(raw) == 10:
+            raw = '0' + raw
         return raw if re.fullmatch(r'09\d{9}', raw) else ''
 
     def e164(mobile):
@@ -89,14 +96,22 @@ def register_outreach(app, db_path):
     def provider_config():
         provider = (os.environ.get('SMS_PROVIDER') or '').strip().lower()
         api_key = (os.environ.get('SMS_API_KEY') or '').strip()
+        username = (os.environ.get('SMS_USERNAME') or '').strip()
+        password = (os.environ.get('SMS_PASSWORD') or '').strip()
         sender = (os.environ.get('SMS_SENDER') or '').strip()
         live = (os.environ.get('SMS_LIVE') or '0').strip() == '1'
+        if provider == 'melipayamak':
+            configured = bool(username and password and sender)
+        else:
+            configured = bool(provider in {'ippanel','kavenegar'} and api_key and sender)
         return {
             'provider': provider,
             'api_key': api_key,
+            'username': username,
+            'password': password,
             'sender': sender,
             'live': live,
-            'configured': bool(provider in {'ippanel','kavenegar'} and api_key and sender),
+            'configured': configured,
         }
 
     def send_ippanel(cfg, recipient, body):
@@ -121,12 +136,48 @@ def register_outreach(app, db_path):
             return str(entries[0].get('messageid') or entries[0].get('id') or '')
         return str(data.get('return', {}).get('message') or '')
 
+    def send_melipayamak(cfg, recipient, body):
+        # Official MeliPayamak REST client uses this endpoint and form fields.
+        r = requests.post(
+            'https://rest.payamak-panel.com/api/SendSMS/SendSMS',
+            data={
+                'username': cfg['username'],
+                'password': cfg['password'],
+                'to': recipient,
+                'from': cfg['sender'],
+                'text': body,
+                'isFlash': 'false',
+            },
+            timeout=25,
+        )
+        r.raise_for_status()
+        try:
+            data = r.json()
+        except Exception:
+            text = r.text.strip()
+            if not text:
+                raise RuntimeError('MeliPayamak returned an empty response')
+            return text[:180]
+
+        # Different official SDK generations expose slightly different JSON
+        # shapes, so preserve a provider reference without assuming one schema.
+        if isinstance(data, dict):
+            status = data.get('RetStatus', data.get('retStatus', data.get('status')))
+            value = data.get('Value', data.get('value', data.get('RecId', data.get('recId'))))
+            message = data.get('StrRetStatus', data.get('message', ''))
+            if status not in (None, 1, '1', True) and not value:
+                raise RuntimeError(f'MeliPayamak rejected send: {message or status}')
+            return str(value or message or json.dumps(data, ensure_ascii=False))[:180]
+        return str(data)[:180]
+
     def actually_send(cfg, recipient, body):
+        if cfg['provider'] == 'melipayamak':
+            return send_melipayamak(cfg, recipient, body)
         if cfg['provider'] == 'ippanel':
             return send_ippanel(cfg, recipient, body)
         if cfg['provider'] == 'kavenegar':
             return send_kavenegar(cfg, recipient, body)
-        raise RuntimeError('SMS_PROVIDER must be ippanel or kavenegar')
+        raise RuntimeError('SMS_PROVIDER must be melipayamak, ippanel or kavenegar')
 
     @app.get('/admin/outreach')
     @admin_only
@@ -212,4 +263,4 @@ def register_outreach(app, db_path):
     @app.get('/health/outreach')
     def outreach_health():
         cfg = provider_config()
-        return jsonify({'ok': True, 'providers': ['ippanel','kavenegar'], 'configured': cfg['configured'], 'live': cfg['live']})
+        return jsonify({'ok': True, 'providers': sorted(SUPPORTED_PROVIDERS), 'configured': cfg['configured'], 'live': cfg['live'], 'provider': cfg['provider'] or None})
