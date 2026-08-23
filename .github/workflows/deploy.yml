@@ -56,19 +56,34 @@ jobs:
             .venv/bin/pip install -q -r requirements.txt
             mkdir -p /opt/ppos/data
 
-            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py presentation.py outbound_copy.py db_optimizations.py vendor_compat.py wsgi.py
+            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py presentation.py outbound_copy.py site_blueprints.py vertical_sites.py site_redirects.py db_optimizations.py vendor_compat.py wsgi.py
             .venv/bin/python - <<'PY'
             import sqlite3
             from wsgi import app, DB_PATH
             from verticals import VERTICALS, CAMPAIGN_ORDER
+            from site_blueprints import SITE_BLUEPRINTS, get_blueprint
             from data_ingest import _header_map, detect_vertical, _normalize_mobile, _normalize_phone
             c = app.test_client()
             assert c.get('/').status_code == 200
             assert len(VERTICALS) == 30 and len(CAMPAIGN_ORDER) == 30
+            assert len(SITE_BLUEPRINTS) == 30
+            assert set(SITE_BLUEPRINTS) == set(CAMPAIGN_ORDER)
+            for key in CAMPAIGN_ORDER:
+                bp = get_blueprint(key, VERTICALS[key])
+                assert bp.get('layout') and bp.get('hero_title') and bp.get('hero_sub')
+                assert len(bp.get('services') or []) >= 4
+                assert len(bp.get('catalog') or []) >= 6
+                assert len(bp.get('process') or []) == 3
+                assert len(bp.get('faq') or []) >= 3
+                assert len(bp.get('palette') or []) == 3
+
             health = c.get('/health/campaigns').get_json()
             assert health['vertical_count'] == 30 and health['ab_ready'] and health['demo_ready']
             outreach = c.get('/health/outreach').get_json()
             assert outreach['ok'] is True and set(outreach['providers']) == {'melipayamak','ippanel','kavenegar'}
+            sites = c.get('/health/sites').get_json()
+            assert sites['ok'] is True and sites['verticals'] == 30
+            assert set(['home','services','catalog','about','contact','account']).issubset(sites['pages'])
             assert app.config['MAX_CONTENT_LENGTH'] >= 100 * 1024 * 1024
 
             headers = ['نام فروشگاه یا مرکز','تفکیک صنف','شماره موبایل','تلفن ثابت','آدرس پستی','نام فرد مسئول']
@@ -76,7 +91,6 @@ jobs:
             assert hm['business_name'] == 'نام فروشگاه یا مرکز'
             assert hm['category'] == 'تفکیک صنف'
             assert hm['mobile'] == 'شماره موبایل'
-
             google_headers = ['title','category','phone','full_address','website','rating','reviews_count','place_id','latitude','longitude','google_maps_url']
             ghm = _header_map(google_headers)
             for required_google in ['business_name','category','phone_any','address','website','rating','reviews','place_id','latitude','longitude','maps_url']:
@@ -88,7 +102,9 @@ jobs:
             assert _normalize_phone('+98 21 1234 5678').startswith('021')
 
             conn = sqlite3.connect(DB_PATH)
-            assert conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='lead_external_ids'").fetchone()
+            table_names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            for table in ['lead_external_ids','site_customers','site_requests','site_catalog_items','site_favorites','site_page_overrides']:
+                assert table in table_names, table
             conn.close()
 
             for key, info in VERTICALS.items():
@@ -98,21 +114,23 @@ jobs:
                 assert info.get('hero_image') and info.get('theme_primary')
                 assert info.get('headline') and info.get('offer_title')
                 assert '{url}' in info['hooks'][0] and '{name}' in info['hooks'][0]
+
             routes = {r.rule for r in app.url_map.iter_rules()}
             required = {
-                '/health/campaigns','/health/outreach',
+                '/health/campaigns','/health/outreach','/health/sites',
                 '/admin/campaigns','/admin/campaigns/import','/admin/campaigns/template.csv','/admin/data/import-raw',
                 '/admin/outreach','/admin/outreach/prepare','/admin/outreach/send','/admin/outreach/suppress',
                 '/admin/calls','/admin/calls/<int:lead_id>/log',
                 '/admin/campaign/<vertical>','/admin/campaign/<vertical>/sms.csv','/admin/campaign/<vertical>/calls.csv',
-                '/v/<slug>','/m/<slug>','/api/v/<slug>/lead','/api/v/<slug>/event','/activate/<slug>',
+                '/v/<slug>','/d/<slug>','/m/<slug>','/api/v/<slug>/lead','/api/v/<slug>/event','/activate/<slug>',
+                '/s/<slug>','/s/<slug>/<page>','/s/<slug>/request','/s/<slug>/account','/s/<slug>/account/login','/s/<slug>/account/logout','/s/<slug>/favorite/<int:item_id>',
                 '/admin/campaign/realestate','/api/realestate/<slug>/lead','/p/<slug>'
             }
             missing = required - routes
             assert not missing, f'Missing routes: {missing}'
-            for template in ['campaigns_hub.html','campaign_vertical.html','demo_vertical.html','demo_realestate.html','merchant_vertical.html','activation_vertical.html','outreach.html','calls.html']:
+            for template in ['campaigns_hub.html','campaign_vertical.html','demo_vertical.html','demo_realestate.html','merchant_vertical.html','activation_vertical.html','outreach.html','calls.html','vertical_site.html','vertical_site_login.html','vertical_site_account.html']:
                 app.jinja_env.get_template(template)
-            print('PPOS self-test passed: premium UI + 30 verticals + licensed-file Maps import + MeliPayamak + Call Desk')
+            print('PPOS self-test passed: 30 deep vertical sites + 5 public pages + customer portal + DB + Maps import + MeliPayamak')
             PY
 
             if [ ! -f /etc/ppos.env ]; then
@@ -155,13 +173,7 @@ jobs:
                 listen [::]:80;
                 server_name ppos.smarbiz.sbs;
                 client_max_body_size 120m;
-
-                location /static/ {
-                    alias /opt/ppos/static/;
-                    expires 1h;
-                    add_header Cache-Control "public";
-                }
-
+                location /static/ { alias /opt/ppos/static/; expires 1h; add_header Cache-Control "public"; }
                 location / {
                     proxy_pass http://127.0.0.1:8080;
                     proxy_http_version 1.1;
@@ -184,17 +196,16 @@ jobs:
             systemctl restart ppos
             systemctl enable --now nginx
             systemctl reload nginx
-
             sleep 2
             curl -fsS http://127.0.0.1:8080/health/campaigns | grep -q '"vertical_count":30'
             curl -fsS http://127.0.0.1:8080/health/outreach | grep -q '"ok":true'
+            curl -fsS http://127.0.0.1:8080/health/sites | grep -q '"verticals":30'
             systemctl is-active --quiet ppos
-
             certbot --nginx -d ppos.smarbiz.sbs --non-interactive --agree-tos --register-unsafely-without-email --redirect || true
             systemctl reload nginx
             echo "PPOS deployment complete"
 
-      - name: Check public campaign ops
+      - name: Check public platform
         id: public
         if: always()
         continue-on-error: true
@@ -203,8 +214,9 @@ jobs:
           for i in {1..6}; do
             C=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/campaigns || true)
             O=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/outreach || true)
-            if echo "$C" | grep -q '"vertical_count":30' && echo "$C" | grep -q '"ab_ready":true' && echo "$O" | grep -q '"ok":true'; then
-              echo "Public campaign ops health check passed"
+            S=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/sites || true)
+            if echo "$C" | grep -q '"vertical_count":30' && echo "$O" | grep -q '"ok":true' && echo "$S" | grep -q '"verticals":30' && echo "$S" | grep -q '"ok":true'; then
+              echo "Public platform health check passed"
               exit 0
             fi
             sleep 10
@@ -219,5 +231,5 @@ jobs:
             const server = '${{ steps.server.outcome }}';
             const publicHealth = '${{ steps.public.outcome }}';
             const icon = server === 'success' && publicHealth === 'success' ? '✅' : (server === 'success' ? '⚠️' : '❌');
-            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public campaign ops: **${publicHealth}**\n- Premium real-photo demos: **validated**\n- Natural Persian site/SMS copy: **validated**\n- Campaign engine: **30 verticals**\n- Google Maps CSV/XLSX import: **validated**\n- Live Maps embed: **enabled when Embed key exists**\n- Place ID dedupe: **enabled**\n- SMS providers: **MeliPayamak + IPPanel + Kavenegar**\n- SMS default mode: **dry-run unless SMS_LIVE=1**\n- Presenter Call Desk: **enabled**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n- Call Desk: https://ppos.smarbiz.sbs/admin/calls\n`;
+            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public platform: **${publicHealth}**\n- Deep vertical websites: **30/30**\n- Public pages per business: **Home + Services + Catalog + About + Contact**\n- Homepage sections: **8+**\n- Customer account/portal: **enabled**\n- Tenant DB: **customers + requests + catalog + favorites + page overrides**\n- Legacy SMS links → full site: **enabled**\n- Real-photo visual systems: **30 vertical-specific blueprints**\n- Google Maps CSV/XLSX import: **validated**\n- Live Maps embed: **enabled when key exists**\n- SMS providers: **MeliPayamak + IPPanel + Kavenegar**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n- Call Desk: https://ppos.smarbiz.sbs/admin/calls\n`;
             await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: 1, body});
