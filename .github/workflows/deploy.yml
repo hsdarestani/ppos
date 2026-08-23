@@ -23,13 +23,17 @@ jobs:
         env:
           SMS_PROVIDER: ${{ secrets.SMS_PROVIDER }}
           SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
+          SMS_USERNAME: ${{ secrets.SMS_USERNAME }}
+          SMS_PASSWORD: ${{ secrets.SMS_PASSWORD }}
           SMS_SENDER: ${{ secrets.SMS_SENDER }}
           SMS_LIVE: ${{ secrets.SMS_LIVE }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_MAPS_EMBED_KEY: ${{ secrets.GOOGLE_MAPS_EMBED_KEY }}
         with:
           host: ${{ secrets.HOST }}
           username: root
           password: ${{ secrets.PASS }}
-          envs: SMS_PROVIDER,SMS_API_KEY,SMS_SENDER,SMS_LIVE
+          envs: SMS_PROVIDER,SMS_API_KEY,SMS_USERNAME,SMS_PASSWORD,SMS_SENDER,SMS_LIVE,GOOGLE_MAPS_API_KEY,GOOGLE_MAPS_EMBED_KEY
           command_timeout: 20m
           script: |
             set -e
@@ -52,7 +56,7 @@ jobs:
             .venv/bin/pip install -q -r requirements.txt
             mkdir -p /opt/ppos/data
 
-            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py db_optimizations.py vendor_compat.py wsgi.py
+            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py maps_seed.py presentation.py db_optimizations.py vendor_compat.py wsgi.py
             .venv/bin/python - <<'PY'
             import sqlite3
             from wsgi import app, DB_PATH
@@ -64,7 +68,9 @@ jobs:
             health = c.get('/health/campaigns').get_json()
             assert health['vertical_count'] == 30 and health['ab_ready'] and health['demo_ready']
             outreach = c.get('/health/outreach').get_json()
-            assert outreach['ok'] is True and set(outreach['providers']) == {'ippanel','kavenegar'}
+            assert outreach['ok'] is True and set(outreach['providers']) == {'melipayamak','ippanel','kavenegar'}
+            maps = c.get('/health/maps').get_json()
+            assert maps['ok'] is True and maps['verticals'] == 30 and maps['target_per_vertical'] == 100
             assert app.config['MAX_CONTENT_LENGTH'] >= 100 * 1024 * 1024
 
             headers = ['نام فروشگاه یا مرکز','تفکیک صنف','شماره موبایل','تلفن ثابت','آدرس پستی','نام فرد مسئول']
@@ -91,10 +97,13 @@ jobs:
                 assert info.get('label') and info.get('product') and info.get('price')
                 assert len(info.get('hooks') or []) >= 2
                 assert len(info.get('questions') or []) == 3
+                assert info.get('hero_image') and info.get('theme_primary')
+                assert info.get('headline') and info.get('offer_title')
             routes = {r.rule for r in app.url_map.iter_rules()}
             required = {
-                '/health/campaigns','/health/outreach',
+                '/health/campaigns','/health/outreach','/health/maps',
                 '/admin/campaigns','/admin/campaigns/import','/admin/campaigns/template.csv','/admin/data/import-raw',
+                '/admin/maps','/admin/maps/seed','/admin/maps/seed-all',
                 '/admin/outreach','/admin/outreach/prepare','/admin/outreach/send','/admin/outreach/suppress',
                 '/admin/calls','/admin/calls/<int:lead_id>/log',
                 '/admin/campaign/<vertical>','/admin/campaign/<vertical>/sms.csv','/admin/campaign/<vertical>/calls.csv',
@@ -103,20 +112,24 @@ jobs:
             }
             missing = required - routes
             assert not missing, f'Missing routes: {missing}'
-            for template in ['campaigns_hub.html','campaign_vertical.html','demo_vertical.html','merchant_vertical.html','activation_vertical.html','outreach.html','calls.html']:
+            for template in ['campaigns_hub.html','campaign_vertical.html','demo_vertical.html','demo_realestate.html','merchant_vertical.html','activation_vertical.html','outreach.html','calls.html','maps.html']:
                 app.jinja_env.get_template(template)
-            print('PPOS launch self-test passed: 30 verticals + Google Maps import + outreach + Call Desk')
+            print('PPOS self-test passed: premium UI + 30 verticals + Google Maps/Places + MeliPayamak + Call Desk')
             PY
 
             if [ ! -f /etc/ppos.env ]; then
               echo "SECRET_KEY=$(openssl rand -hex 32)" > /etc/ppos.env
               chmod 600 /etc/ppos.env
             fi
-            sed -i '/^SMS_PROVIDER=/d;/^SMS_API_KEY=/d;/^SMS_SENDER=/d;/^SMS_LIVE=/d' /etc/ppos.env
+            sed -i '/^SMS_PROVIDER=/d;/^SMS_API_KEY=/d;/^SMS_USERNAME=/d;/^SMS_PASSWORD=/d;/^SMS_SENDER=/d;/^SMS_LIVE=/d;/^GOOGLE_MAPS_API_KEY=/d;/^GOOGLE_MAPS_EMBED_KEY=/d' /etc/ppos.env
             [ -n "$SMS_PROVIDER" ] && printf 'SMS_PROVIDER=%s\n' "$SMS_PROVIDER" >> /etc/ppos.env || true
             [ -n "$SMS_API_KEY" ] && printf 'SMS_API_KEY=%s\n' "$SMS_API_KEY" >> /etc/ppos.env || true
+            [ -n "$SMS_USERNAME" ] && printf 'SMS_USERNAME=%s\n' "$SMS_USERNAME" >> /etc/ppos.env || true
+            [ -n "$SMS_PASSWORD" ] && printf 'SMS_PASSWORD=%s\n' "$SMS_PASSWORD" >> /etc/ppos.env || true
             [ -n "$SMS_SENDER" ] && printf 'SMS_SENDER=%s\n' "$SMS_SENDER" >> /etc/ppos.env || true
             printf 'SMS_LIVE=%s\n' "${SMS_LIVE:-0}" >> /etc/ppos.env
+            [ -n "$GOOGLE_MAPS_API_KEY" ] && printf 'GOOGLE_MAPS_API_KEY=%s\n' "$GOOGLE_MAPS_API_KEY" >> /etc/ppos.env || true
+            [ -n "$GOOGLE_MAPS_EMBED_KEY" ] && printf 'GOOGLE_MAPS_EMBED_KEY=%s\n' "$GOOGLE_MAPS_EMBED_KEY" >> /etc/ppos.env || true
             chmod 600 /etc/ppos.env
 
             cat > /etc/systemd/system/ppos.service <<'EOF'
@@ -177,6 +190,7 @@ jobs:
             sleep 2
             curl -fsS http://127.0.0.1:8080/health/campaigns | grep -q '"vertical_count":30'
             curl -fsS http://127.0.0.1:8080/health/outreach | grep -q '"ok":true'
+            curl -fsS http://127.0.0.1:8080/health/maps | grep -q '"verticals":30'
             systemctl is-active --quiet ppos
 
             certbot --nginx -d ppos.smarbiz.sbs --non-interactive --agree-tos --register-unsafely-without-email --redirect || true
@@ -192,7 +206,8 @@ jobs:
           for i in {1..6}; do
             C=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/campaigns || true)
             O=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/outreach || true)
-            if echo "$C" | grep -q '"vertical_count":30' && echo "$C" | grep -q '"ab_ready":true' && echo "$O" | grep -q '"ok":true'; then
+            M=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/maps || true)
+            if echo "$C" | grep -q '"vertical_count":30' && echo "$C" | grep -q '"ab_ready":true' && echo "$O" | grep -q '"ok":true' && echo "$M" | grep -q '"verticals":30'; then
               echo "Public campaign ops health check passed"
               exit 0
             fi
@@ -208,5 +223,5 @@ jobs:
             const server = '${{ steps.server.outcome }}';
             const publicHealth = '${{ steps.public.outcome }}';
             const icon = server === 'success' && publicHealth === 'success' ? '✅' : (server === 'success' ? '⚠️' : '❌');
-            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public campaign ops: **${publicHealth}**\n- Campaign engine: **30 verticals**\n- Google Maps CSV/XLSX import: **validated**\n- Place ID dedupe: **enabled**\n- Raw CSV/XLSX ingestion: **enabled (100 MB)**\n- Large DB indexes/WAL: **enabled**\n- SMS providers: **IPPanel + Kavenegar**\n- SMS default mode: **dry-run unless SMS_LIVE=1**\n- Presenter Call Desk: **enabled**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n- Call Desk: https://ppos.smarbiz.sbs/admin/calls\n`;
+            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public campaign ops: **${publicHealth}**\n- Premium real-photo demos: **validated**\n- Campaign engine: **30 verticals**\n- Google Maps CSV/XLSX import: **validated**\n- Google Places 100/vertical seeder: **enabled (key-gated)**\n- Live Maps embed: **enabled when key exists**\n- Place ID dedupe: **enabled**\n- SMS providers: **MeliPayamak + IPPanel + Kavenegar**\n- SMS default mode: **dry-run unless SMS_LIVE=1**\n- Presenter Call Desk: **enabled**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Google Maps Leads: https://ppos.smarbiz.sbs/admin/maps\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n- Call Desk: https://ppos.smarbiz.sbs/admin/calls\n`;
             await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: 1, body});
