@@ -9,6 +9,7 @@ from campaign_tools import register_campaign_tools
 from data_ingest import register_data_ingest, CATEGORY_KEYWORDS
 from outreach import register_outreach
 from call_ops import register_call_ops
+from maps_seed import register_maps_seed
 from db_optimizations import optimize_database
 from vendor_compat import apply_vendor_compat
 from presentation import apply_presentation
@@ -30,3 +31,4 @@ register_campaign_tools(app)
 register_data_ingest(app, DB_PATH)
 register_outreach(app, DB_PATH)
 register_call_ops(app, DB_PATH)
+register_maps_seed(app, DB_PATH)
