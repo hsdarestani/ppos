@@ -1,3 +1,5 @@
+import os
+
 from app import app, DB_PATH
 from capture import register_capture
 from exports import register_exports
@@ -17,6 +19,8 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 apply_vendor_compat(CATEGORY_KEYWORDS)
 apply_presentation(VERTICALS)
+app.jinja_env.globals['maps_embed_key'] = (os.environ.get('GOOGLE_MAPS_EMBED_KEY') or os.environ.get('GOOGLE_MAPS_API_KEY') or '').strip()
+
 optimize_database(DB_PATH)
 register_capture(app, DB_PATH)
 register_exports(app, DB_PATH)
