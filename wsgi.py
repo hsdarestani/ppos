@@ -9,11 +9,14 @@ from outreach import register_outreach
 from call_ops import register_call_ops
 from db_optimizations import optimize_database
 from vendor_compat import apply_vendor_compat
+from presentation import apply_presentation
+from verticals import VERTICALS
 
 # Real business-database exports can contain hundreds of thousands of rows.
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 apply_vendor_compat(CATEGORY_KEYWORDS)
+apply_presentation(VERTICALS)
 optimize_database(DB_PATH)
 register_capture(app, DB_PATH)
 register_exports(app, DB_PATH)
