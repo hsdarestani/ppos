@@ -9,7 +9,6 @@ from campaign_tools import register_campaign_tools
 from data_ingest import register_data_ingest, CATEGORY_KEYWORDS
 from outreach import register_outreach
 from call_ops import register_call_ops
-from maps_seed import register_maps_seed
 from db_optimizations import optimize_database
 from vendor_compat import apply_vendor_compat
 from presentation import apply_presentation
@@ -22,6 +21,8 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 apply_vendor_compat(CATEGORY_KEYWORDS)
 apply_presentation(VERTICALS)
 apply_outbound_copy(VERTICALS)
+# Use an Embed-key restricted to ppos.smarbiz.sbs when possible. A separate
+# GOOGLE_MAPS_API_KEY fallback is kept for existing deployments.
 app.jinja_env.globals['maps_embed_key'] = (os.environ.get('GOOGLE_MAPS_EMBED_KEY') or os.environ.get('GOOGLE_MAPS_API_KEY') or '').strip()
 
 optimize_database(DB_PATH)
@@ -33,4 +34,3 @@ register_campaign_tools(app)
 register_data_ingest(app, DB_PATH)
 register_outreach(app, DB_PATH)
 register_call_ops(app, DB_PATH)
-register_maps_seed(app, DB_PATH)
