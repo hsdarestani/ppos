@@ -3,101 +3,53 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f3efe7">
-  <title>{{lead.business_name}} — فایل‌یاب اختصاصی</title>
+  <meta name="theme-color" content="#21483a">
+  <title>{{lead.business_name}} | مشاور املاک</title>
+  <link rel="preconnect" href="https://images.pexels.com">
   <link rel="stylesheet" href="/static/realestate.css">
+  <link rel="stylesheet" href="/static/site_demo.css">
 </head>
-<body style="--brand:{{lead.accent or '#194d3a'}}">
-<div class="estate-app">
-  <header class="estate-nav">
-    <div class="estate-brand">
-      {% if lead.logo_url %}<img src="{{lead.logo_url}}" alt="{{lead.business_name}}">{% else %}<span class="brand-seal">{{lead.business_name[:1]}}</span>{% endif %}
-      <div><strong>{{lead.business_name}}</strong><small>{{lead.address or (lead.city ~ ' · مشاور املاک')}}</small></div>
-    </div>
-    {% if lead.phone %}<a class="call-pill" href="tel:{{lead.phone}}" data-track="cta">تماس</a>{% endif %}
+<body class="site-demo estate-premium" style="--brand:{{lead.accent or '#21483a'}};--ink:#21483a;--soft:#e8dfd0;--hero:url('https://images.pexels.com/photos/6588599/pexels-photo-6588599.jpeg?auto=compress&cs=tinysrgb&w=1800&h=1200&fit=crop')">
+{% set grating = lead.meta.get('google_rating') or lead.meta.get('rating') %}{% set greviews = lead.meta.get('google_reviews') or lead.meta.get('reviews') %}{% set gpid = lead.meta.get('google_place_id') or lead.meta.get('place_id') %}
+<div class="site-shell estate-app">
+  <header class="site-nav">
+    <a class="site-identity" href="#top">{% if lead.logo_url %}<img src="{{lead.logo_url}}" alt="{{lead.business_name}}">{% else %}<span>{{lead.business_name[:1]}}</span>{% endif %}<div><strong>{{lead.business_name}}</strong><small>مشاور املاک{% if lead.city %} · {{lead.city}}{% endif %}</small></div></a>
+    <div class="site-nav-actions">{% if grating %}<span class="google-score"><b>★ {{grating}}</b><small>{{greviews or ''}} نظر</small></span>{% endif %}{% if lead.phone %}<a class="nav-call" href="tel:{{lead.phone}}" data-track="cta">تماس مستقیم</a>{% endif %}</div>
   </header>
 
-  <main>
-    <section class="estate-hero">
-      <div class="hero-copy">
-        <div class="personal-badge"><i></i> فایل‌یاب اختصاصی {{lead.business_name}}</div>
-        <h1>خانه‌ای که می‌خوای،<br><em>بین صدها فایل گم نشه.</em></h1>
-        <p>فقط نیازت رو بگو. {{lead.business_name}} فایل‌های مناسب بودجه و منطقه‌ی تو رو جدا می‌کنه و مستقیم برات می‌فرسته.</p>
-        <div class="trust-row"><span>بدون نصب اپ</span><span>کمتر از ۳۰ ثانیه</span><span>درخواست مستقیم</span></div>
+  <main id="top">
+    <section class="photo-hero">
+      <div class="photo-copy">
+        <span class="welcome-pill">{{lead.business_name}}</span>
+        <h1>ملک مناسب شما،<br>بدون گشتن بین صدها آگهی.</h1>
+        <p>بودجه و محدوده را بگویید؛ فایل‌هایی که واقعاً به خواسته‌تان نزدیک‌اند برای شما جدا می‌شوند.</p>
+        <div class="hero-actions"><a href="#finderSection" class="hero-primary">پیدا کردن ملک مناسب</a>{% if lead.phone %}<a href="tel:{{lead.phone}}" class="hero-secondary">مشاوره تلفنی</a>{% endif %}</div>
+        <div class="hero-facts">{% if lead.city %}<span><small>شهر</small><b>{{lead.city}}</b></span>{% endif %}{% if grating %}<span><small>امتیاز گوگل</small><b>★ {{grating}}</b></span>{% endif %}<span><small>ثبت درخواست</small><b>کمتر از یک دقیقه</b></span></div>
       </div>
+      <div class="hero-business-card"><span class="card-eyebrow">فایل‌یاب {{lead.business_name}}</span><strong>نیازت را بگو؛ فایل مناسب را پیدا کنیم.</strong><p>نوع معامله، محدوده و بودجه. همین سه مورد برای شروع کافی است.</p><a href="#finderSection">شروع جستجو ←</a></div>
+    </section>
 
-      <div class="finder" id="finder">
-        <div class="finder-head"><div><small>فایل‌یاب هوشمند</small><strong>دنبال چه ملکی هستی؟</strong></div><span class="live-dot">آنلاین</span></div>
+    <section class="request-section" id="finderSection">
+      <div class="request-intro"><span class="site-kicker">فایل‌یاب اختصاصی</span><h2>به‌جای دیدن فایل‌های بی‌ربط، از نیاز خودتان شروع کنید.</h2><p>چند انتخاب کوتاه انجام دهید. بعد {{lead.business_name}} می‌تواند دقیق‌تر و سریع‌تر فایل مناسب را برایتان بفرستد.</p><div class="quiet-points"><span>خرید و اجاره</span><span>بر اساس محدوده</span><span>متناسب با بودجه</span></div></div>
+      <div class="finder premium-flow" id="finder">
+        <div class="finder-head"><div><small>{{lead.business_name}}</small><strong>دنبال چه ملکی هستید؟</strong></div><span class="live-dot">پاسخ‌گو</span></div>
         <div class="progress"><i id="progressBar"></i></div>
-        <div class="finder-step active" data-step="1">
-          <span class="step-kicker">مرحله ۱ از ۳</span>
-          <h2>نوع درخواست</h2>
-          <div class="choice-grid cols-3" id="intentChoices">
-            <button class="pick active" data-value="خرید">خرید</button>
-            <button class="pick" data-value="رهن و اجاره">رهن و اجاره</button>
-            <button class="pick" data-value="فروش ملک">فروش ملک</button>
-          </div>
-          <button class="next primary" data-next="2">ادامه</button>
-        </div>
-        <div class="finder-step" data-step="2">
-          <span class="step-kicker">مرحله ۲ از ۳</span>
-          <h2>کجا و چه بودجه‌ای؟</h2>
-          <label><span>منطقه یا محله</span><input id="areaInput" value="{{lead.meta.get('neighborhood') or lead.address or ''}}" placeholder="مثلاً سعادت‌آباد"></label>
-          <label><span>بودجه تقریبی</span><select id="budgetInput"><option>تا ۵ میلیارد</option><option selected>۵ تا ۱۰ میلیارد</option><option>۱۰ تا ۲۰ میلیارد</option><option>بیشتر از ۲۰ میلیارد</option></select></label>
-          <div class="split-actions"><button class="back" data-back="1">برگشت</button><button class="next primary" data-next="3">دیدن پیشنهادها</button></div>
-        </div>
-        <div class="finder-step" data-step="3">
-          <div class="match-head"><span class="match-icon">✓</span><div><small>بر اساس انتخاب شما</small><h2><b id="matchCount">۳</b> فایل مناسب پیدا شد</h2></div></div>
-          <div class="property-stack">
-            <article class="property-card"><div class="property-image p1"><span>پیشنهاد ویژه</span></div><div class="property-copy"><small id="areaMirror1">{{lead.address or 'منطقه موردنظر شما'}}</small><strong>آپارتمان خوش‌نقشه و نورگیر</strong><div><span>۱۴۰ متر</span><span>۳ خواب</span><span>پارکینگ</span></div><b>قیمت متناسب با بودجه شما</b></div></article>
-            <article class="property-card compact"><div class="property-image p2"></div><div class="property-copy"><small id="areaMirror2">{{lead.address or 'منطقه موردنظر شما'}}</small><strong>فایل کم‌سن و فول امکانات</strong><div><span>۱۱۰ متر</span><span>۲ خواب</span></div></div></article>
-          </div>
-          <div class="lead-capture" id="leadCapture">
-            <div class="capture-head"><div><small>برای دریافت همه فایل‌ها</small><b>شماره تماس را بگذار</b></div><span>۱۰ ثانیه</span></div>
-            <input id="customerName" placeholder="نام (اختیاری)">
-            <input id="customerPhone" inputmode="tel" autocomplete="tel" maxlength="11" placeholder="مثلاً 09121234567">
-            <button class="next primary" id="submitCustomerLead">ارسال فایل‌ها برای من</button>
-            <small class="privacy-note">در این دموی فروش، شماره‌ای که وارد می‌کنید فقط برای نشان دادن جریان ثبت لید ذخیره می‌شود.</small>
-            <div class="capture-error" id="captureError"></div>
-            <div class="capture-success" id="captureSuccess" hidden><b>لید ثبت شد ✓</b><span>حالا دقیقاً ببین {{lead.business_name}} این درخواست را چطور در پنل خودش می‌بیند.</span><a id="merchantPreviewLink" href="/p/{{lead.slug}}">دیدن پنل لید {{lead.business_name}} ←</a></div>
-          </div>
-          <button class="tiny-back" data-back="2">تغییر جستجو</button>
-        </div>
+        <div class="finder-step active" data-step="1"><span class="step-kicker">۱ / ۳</span><h2>نوع درخواست</h2><div class="choice-grid cols-3" id="intentChoices"><button class="pick active" data-value="خرید">خرید</button><button class="pick" data-value="رهن و اجاره">رهن و اجاره</button><button class="pick" data-value="فروش ملک">فروش ملک</button></div><button class="next primary" data-next="2">ادامه</button></div>
+        <div class="finder-step" data-step="2"><span class="step-kicker">۲ / ۳</span><h2>محدوده و بودجه</h2><label><span>منطقه یا محله</span><input id="areaInput" value="{{lead.meta.get('neighborhood') or lead.address or ''}}" placeholder="مثلاً سعادت‌آباد"></label><label><span>بودجه تقریبی</span><select id="budgetInput"><option>تا ۵ میلیارد</option><option selected>۵ تا ۱۰ میلیارد</option><option>۱۰ تا ۲۰ میلیارد</option><option>بیشتر از ۲۰ میلیارد</option></select></label><div class="split-actions"><button class="back" data-back="1">قبلی</button><button class="next primary" data-next="3">دیدن پیشنهادها</button></div></div>
+        <div class="finder-step" data-step="3"><div class="match-head"><span class="match-icon">✓</span><div><small>بر اساس انتخاب شما</small><h2><b id="matchCount">۳</b> پیشنهاد نزدیک پیدا شد</h2></div></div><div class="property-stack"><article class="property-card"><div class="property-image p1"><span>پیشنهاد نزدیک</span></div><div class="property-copy"><small id="areaMirror1">{{lead.address or 'محدوده موردنظر شما'}}</small><strong>آپارتمان خوش‌نقشه و نورگیر</strong><div><span>۱۴۰ متر</span><span>۳ خواب</span><span>پارکینگ</span></div><b>متناسب با بودجه شما</b></div></article><article class="property-card compact"><div class="property-image p2"></div><div class="property-copy"><small id="areaMirror2">{{lead.address or 'محدوده موردنظر شما'}}</small><strong>فایل کم‌سن و فول امکانات</strong><div><span>۱۱۰ متر</span><span>۲ خواب</span></div></div></article></div><div class="lead-capture" id="leadCapture"><div class="capture-head"><div><small>برای دریافت فایل‌های بیشتر</small><b>شماره‌تان را بگذارید</b></div><span>۱۰ ثانیه</span></div><input id="customerName" placeholder="نام شما"><input id="customerPhone" inputmode="tel" autocomplete="tel" maxlength="11" placeholder="09xxxxxxxxx"><button class="next primary" id="submitCustomerLead">فایل‌های مناسب را برایم بفرستید</button><small class="privacy-note">اطلاعات شما فقط برای همین درخواست در اختیار {{lead.business_name}} قرار می‌گیرد.</small><div class="capture-error" id="captureError"></div><div class="capture-success" id="captureSuccess" hidden><b>درخواست ثبت شد ✓</b><span>حالا می‌توانید ببینید این درخواست چطور وارد پنل {{lead.business_name}} می‌شود.</span><a id="merchantPreviewLink" href="/p/{{lead.slug}}">دیدن پنل درخواست ←</a></div></div><button class="tiny-back" data-back="2">تغییر جستجو</button></div>
       </div>
     </section>
 
-    <section class="merchant-reveal" id="merchantReveal">
-      <div class="reveal-copy"><span class="section-label">کاری که برای شما انجام می‌دهد</span><h2>این فرم، برای شما تبدیل به <em>لید واقعی</em> می‌شود.</h2><p>مشتری نوع معامله، محله، بودجه و شماره‌اش را وارد می‌کند؛ شما همان لحظه نیاز دقیقش را می‌بینید و تماس می‌گیرید. نه سایت شلوغ، نه CRM پیچیده.</p><a class="merchant-preview-btn" href="/p/{{lead.slug}}">باز کردن پنل لید خودم ←</a></div>
-      <div class="lead-phone">
-        <div class="phone-top"><span></span><b>لید جدید برای {{lead.business_name}}</b><time>همین الان</time></div>
-        <div class="lead-alert"><i>⌂</i><div><strong>مشتری جدید ملکی</strong><p><b id="leadIntent">خرید</b> · <span id="leadArea">{{lead.address or 'سعادت‌آباد'}}</span></p></div></div>
-        <div class="lead-fields"><div><span>بودجه</span><b id="leadBudget">۵ تا ۱۰ میلیارد</b></div><div><span>منبع</span><b>فایل‌یاب اختصاصی شما</b></div></div>
-        <div class="lead-contact"><span class="avatar">م</span><div><small>شماره مشتری بعد از ثبت درخواست</small><strong id="leadPhoneMirror">09•• ••• ••47</strong></div><button>تماس</button></div>
-      </div>
-    </section>
+    <section class="place-story"><div class="place-photo"></div><div class="place-copy"><span class="site-kicker">{{lead.city or 'نزدیک شما'}}</span><h2>{{lead.business_name}}</h2><p>{{lead.address or 'برای آدرس دقیق و هماهنگی، با مجموعه تماس بگیرید.'}}</p>{% if grating %}<div class="rating-line"><b>★ {{grating}}</b><span>بر اساس {{greviews or 'نظرهای'}} گوگل</span></div>{% endif %}<div class="place-links">{% if lead.meta.get('website') %}<a href="{{lead.meta.get('website')}}" target="_blank" rel="noopener">وب‌سایت</a>{% endif %}{% if lead.meta.get('google_maps_url') %}<a href="{{lead.meta.get('google_maps_url')}}" target="_blank" rel="noopener">مشاهده در Google Maps</a>{% endif %}{% if lead.phone %}<a href="tel:{{lead.phone}}">{{lead.phone}}</a>{% endif %}</div></div></section>
 
-    <section class="how-it-works"><span class="section-label">خیلی ساده</span><h2>سه اتفاق. یک مشتری جدید.</h2><div class="three"><article><b>01</b><h3>مشتری لینک را باز می‌کند</h3><p>از اینستاگرام، بیو، QR، تبلیغ یا پیام شما.</p></article><article><b>02</b><h3>نیازش را در ۳۰ ثانیه می‌گوید</h3><p>نوع معامله، منطقه، بودجه و شماره تماس.</p></article><article><b>03</b><h3>لید مستقیم برای شما می‌آید</h3><p>اطلاعات آماده‌ی تماس، با نیت خرید مشخص.</p></article></div></section>
+    {% if maps_embed_key and (gpid or lead.address) %}<section class="map-section"><div class="map-copy"><span class="site-kicker">لوکیشن</span><h2>مسیریابی تا {{lead.business_name}}</h2><p>نقشه زنده Google Maps با داده‌ی به‌روز محل کسب‌وکار.</p></div><iframe loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.google.com/maps/embed/v1/place?key={{maps_embed_key}}&q={% if gpid %}place_id:{{gpid}}{% else %}{{(lead.address ~ ' ' ~ (lead.city or ''))|urlencode}}{% endif %}"></iframe></section>{% endif %}
 
-    <section class="personal-proof">
-      <div class="proof-brand"><span class="brand-seal large">{{lead.business_name[:1]}}</span><div><small>نسخه‌ای که الان می‌بینید</small><h2>برای <em>{{lead.business_name}}</em> ساخته شده.</h2></div></div>
-      <div class="proof-list"><span>نام و برند خودتان</span><span>محله و بازار خودتان</span><span>شماره و CTA خودتان</span><span>گزارش بازدید و لید</span></div>
-    </section>
+    <section class="merchant-reveal refined-effect"><div class="reveal-copy"><span class="site-kicker">برای صاحب {{lead.business_name}}</span><h2>هر جستجو تبدیل به یک درخواست قابل‌پیگیری می‌شود.</h2><p>قبل از تماس می‌دانید مشتری خرید می‌خواهد یا اجاره، کدام محدوده را می‌خواهد و حدود بودجه‌اش چقدر است.</p><a class="merchant-preview-btn" href="/p/{{lead.slug}}">دیدن پنل درخواست‌ها ←</a></div><div class="lead-phone"><div class="phone-top"><span></span><b>درخواست جدید</b><time>همین حالا</time></div><div class="lead-alert"><i>⌂</i><div><strong>مشتری جدید ملکی</strong><p><b id="leadIntent">خرید</b> · <span id="leadArea">{{lead.address or 'محدوده انتخاب‌شده'}}</span></p></div></div><div class="lead-fields"><div><span>بودجه</span><b id="leadBudget">۵ تا ۱۰ میلیارد</b></div><div><span>منبع</span><b>فایل‌یاب شما</b></div></div><div class="lead-contact"><span class="avatar">م</span><div><small>شماره مشتری</small><strong id="leadPhoneMirror">09•• ••• ••47</strong></div><button>تماس</button></div></div></section>
 
-    <section class="activation" id="activation">
-      <div class="activation-inner">
-        <span class="section-label light">نسخه آماده است</span>
-        <h2>اگر همین را برای مشتری‌هایتان می‌خواهید،<br>لازم نیست چیزی طراحی شود.</h2>
-        <p>همین نسخه با اطلاعات نهایی {{lead.business_name}} فعال می‌شود. لینک اختصاصی، فایل‌یاب، ثبت لید و داشبورد بازدید.</p>
-        <div class="offer"><div class="offer-meta"><small>فعال‌سازی یک‌باره نسخه MVP</small><strong>۱,۴۹۰,۰۰۰ <i>تومان</i></strong><span>راه‌اندازی + لینک اختصاصی + شخصی‌سازی</span></div><a href="/checkout/{{lead.slug}}" class="activate-btn" data-track="cta">فعال‌سازی همین نسخه <b>←</b></a></div>
-        <div class="activation-note"><span>بدون قرارداد بلندمدت</span><span>بدون نصب اپ</span><span>قابل تغییر قبل از انتشار</span></div>
-      </div>
-    </section>
+    <section class="ready-offer refined-offer" id="activation"><span class="site-kicker">نسخه اختصاصی شما</span><h2>همین صفحه می‌تواند امروز برای مشتری‌های {{lead.business_name}} فعال شود.</h2><p>نام، شماره تماس، لوکیشن، فایل‌یاب و پنل درخواست‌ها برای شما شخصی‌سازی شده. جزئیات ظاهری هم قبل از انتشار قابل تغییر است.</p><div class="pricebox"><div><small>راه‌اندازی این نسخه</small><strong>۱,۴۹۰,۰۰۰ <i>تومان</i></strong></div><a href="/checkout/{{lead.slug}}" data-track="cta">می‌خوام فعالش کنم ←</a></div><div class="riskless"><span>بدون قرارداد بلندمدت</span><span>لینک اختصاصی</span><span>قابل تغییر قبل از انتشار</span></div></section>
   </main>
-
-  <footer><div><b>{{lead.business_name}}</b><span>{{lead.address or lead.city or ''}}</span></div><small>نسخه نمایشی اختصاصی · PPOS</small></footer>
+  <footer class="site-footer"><div><b>{{lead.business_name}}</b><span>{{lead.address or lead.city or ''}}</span></div><small>نسخه اختصاصی آماده فعال‌سازی</small></footer>
 </div>
-
-<script>window.PPOS_SLUG={{lead.slug|tojson}};</script>
-<script src="/static/realestate.js"></script>
+<script>window.PPOS_SLUG={{lead.slug|tojson}};</script><script src="/static/realestate.js"></script>
 </body>
 </html>
