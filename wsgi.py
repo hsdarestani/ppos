@@ -13,6 +13,8 @@ from db_optimizations import optimize_database
 from vendor_compat import apply_vendor_compat
 from presentation import apply_presentation
 from outbound_copy import apply_outbound_copy
+from vertical_sites import register_vertical_sites
+from site_redirects import register_site_redirects
 from verticals import VERTICALS
 
 # Real business-database exports can contain hundreds of thousands of rows.
@@ -34,3 +36,5 @@ register_campaign_tools(app)
 register_data_ingest(app, DB_PATH)
 register_outreach(app, DB_PATH)
 register_call_ops(app, DB_PATH)
+register_vertical_sites(app, DB_PATH)
+register_site_redirects(app, DB_PATH)
