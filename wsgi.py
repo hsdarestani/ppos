@@ -13,6 +13,7 @@ from maps_seed import register_maps_seed
 from db_optimizations import optimize_database
 from vendor_compat import apply_vendor_compat
 from presentation import apply_presentation
+from outbound_copy import apply_outbound_copy
 from verticals import VERTICALS
 
 # Real business-database exports can contain hundreds of thousands of rows.
@@ -20,6 +21,7 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 apply_vendor_compat(CATEGORY_KEYWORDS)
 apply_presentation(VERTICALS)
+apply_outbound_copy(VERTICALS)
 app.jinja_env.globals['maps_embed_key'] = (os.environ.get('GOOGLE_MAPS_EMBED_KEY') or os.environ.get('GOOGLE_MAPS_API_KEY') or '').strip()
 
 optimize_database(DB_PATH)
