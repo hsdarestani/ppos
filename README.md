@@ -1,4 +1,4 @@
-# PPOS — Personalized Product Outbound System
+# PPOS — Customer Growth System for Local Businesses
 
 Programmatic personalized demos for outbound sales to Iranian SMBs.
 
@@ -6,7 +6,21 @@ Programmatic personalized demos for outbound sales to Iranian SMBs.
 
 Core flow: lead database → personalized vertical demo → SMS/call → engagement tracking → presenter follow-up → checkout intent.
 
-The first optimized vertical is **real estate**. Each agency gets a personalized `d/<slug>` page containing a three-step property finder, simulated matched listings, a live lead-preview showing what the agency receives, and a one-click activation CTA.
+The first production vertical is **PPOS Beauty OS**. It is a sellable multi-tenant SaaS product, not a website template.
+
+## Beauty OS
+
+- Premium Persian RTL public salon site with 10+ conversion sections
+- Five-step booking: service → specialist → date → time → confirmation
+- Phone/PIN customer account, appointment history, cancellation, favorites, offers and loyalty
+- Salon dashboard with calendar, customers, services, staff schedules, reviews and marketing automations
+- Tenant-isolated models for businesses, users, customers, staff, services, appointments, campaigns, messages, reviews, payments and favorites
+- Personalized prospect demos at `/demo/<slug>`
+- Showcase at `/beauty-os` (demo admin: `09120000000` / `1234`)
+
+Commercial packaging is prepared for Starter (499,000 toman/month) and future Pro (899,000 toman/month).
+
+The outbound engine and its existing vertical demos remain available for prospecting. The prior real-estate flow continues to use `d/<slug>`.
 
 ## Real-estate 100-lead test
 

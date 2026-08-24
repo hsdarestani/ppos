@@ -56,7 +56,8 @@ jobs:
             .venv/bin/pip install -q -r requirements.txt
             mkdir -p /opt/ppos/data
 
-            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py presentation.py outbound_copy.py site_blueprints.py vertical_sites.py site_redirects.py db_optimizations.py vendor_compat.py wsgi.py
+            .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py presentation.py outbound_copy.py site_blueprints.py vertical_sites.py booking_os.py site_redirects.py db_optimizations.py vendor_compat.py wsgi.py
+            .venv/bin/python -m unittest -v tests.test_beauty_os
             .venv/bin/python - <<'PY'
             import sqlite3
             from wsgi import app, DB_PATH
@@ -84,6 +85,12 @@ jobs:
             sites = c.get('/health/sites').get_json()
             assert sites['ok'] is True and sites['verticals'] == 30
             assert set(['home','services','catalog','about','contact','account']).issubset(sites['pages'])
+            beauty = c.get('/health/beauty-os').get_json()
+            assert beauty['ok'] is True and beauty['multi_tenant'] is True and beauty['services'] >= 8
+            assert beauty['customer_auth'] and beauty['admin_auth'] and beauty['booking']
+            assert c.get('/demo/salon-morvarid').status_code == 200
+            assert c.get('/demo/salon-morvarid/login').status_code == 200
+            assert c.get('/demo/salon-morvarid/admin/login').status_code == 200
             assert app.config['MAX_CONTENT_LENGTH'] >= 100 * 1024 * 1024
 
             headers = ['نام فروشگاه یا مرکز','تفکیک صنف','شماره موبایل','تلفن ثابت','آدرس پستی','نام فرد مسئول']
@@ -103,7 +110,7 @@ jobs:
 
             conn = sqlite3.connect(DB_PATH)
             table_names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            for table in ['lead_external_ids','site_customers','site_requests','site_catalog_items','site_favorites','site_page_overrides']:
+            for table in ['lead_external_ids','site_customers','site_requests','site_catalog_items','site_favorites','site_page_overrides','businesses','users','customers','staff','services','appointments','campaigns','messages','reviews','payments','favorites','staff_schedules']:
                 assert table in table_names, table
             conn.close()
 
@@ -124,13 +131,14 @@ jobs:
                 '/admin/campaign/<vertical>','/admin/campaign/<vertical>/sms.csv','/admin/campaign/<vertical>/calls.csv',
                 '/v/<slug>','/d/<slug>','/m/<slug>','/api/v/<slug>/lead','/api/v/<slug>/event','/activate/<slug>',
                 '/s/<slug>','/s/<slug>/<page>','/s/<slug>/request','/s/<slug>/account','/s/<slug>/account/login','/s/<slug>/account/logout','/s/<slug>/favorite/<int:item_id>',
+                '/beauty-os','/demo/<slug>','/api/demo/<slug>/availability','/api/demo/<slug>/book','/demo/<slug>/login','/demo/<slug>/account','/demo/<slug>/admin/login','/demo/<slug>/admin','/health/beauty-os',
                 '/admin/campaign/realestate','/api/realestate/<slug>/lead','/p/<slug>'
             }
             missing = required - routes
             assert not missing, f'Missing routes: {missing}'
-            for template in ['campaigns_hub.html','campaign_vertical.html','demo_vertical.html','demo_realestate.html','merchant_vertical.html','activation_vertical.html','outreach.html','calls.html','vertical_site.html','vertical_site_login.html','vertical_site_account.html']:
+            for template in ['campaigns_hub.html','campaign_vertical.html','demo_vertical.html','demo_realestate.html','merchant_vertical.html','activation_vertical.html','outreach.html','calls.html','vertical_site.html','vertical_site_login.html','vertical_site_account.html','beauty_public.html','beauty_login.html','beauty_account.html','beauty_admin_login.html','beauty_admin.html']:
                 app.jinja_env.get_template(template)
-            print('PPOS self-test passed: 30 deep vertical sites + 5 public pages + customer portal + DB + Maps import + MeliPayamak')
+            print('PPOS self-test passed: Beauty OS multi-tenant booking + customer/admin auth + 30 campaign verticals')
             PY
 
             if [ ! -f /etc/ppos.env ]; then
@@ -200,6 +208,7 @@ jobs:
             curl -fsS http://127.0.0.1:8080/health/campaigns | grep -q '"vertical_count":30'
             curl -fsS http://127.0.0.1:8080/health/outreach | grep -q '"ok":true'
             curl -fsS http://127.0.0.1:8080/health/sites | grep -q '"verticals":30'
+            curl -fsS http://127.0.0.1:8080/health/beauty-os | grep -q '"ok":true'
             systemctl is-active --quiet ppos
             certbot --nginx -d ppos.smarbiz.sbs --non-interactive --agree-tos --register-unsafely-without-email --redirect || true
             systemctl reload nginx
@@ -215,7 +224,8 @@ jobs:
             C=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/campaigns || true)
             O=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/outreach || true)
             S=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/sites || true)
-            if echo "$C" | grep -q '"vertical_count":30' && echo "$O" | grep -q '"ok":true' && echo "$S" | grep -q '"verticals":30' && echo "$S" | grep -q '"ok":true'; then
+            B=$(curl -fsS --connect-timeout 8 --max-time 15 https://ppos.smarbiz.sbs/health/beauty-os || true)
+            if echo "$C" | grep -q '"vertical_count":30' && echo "$O" | grep -q '"ok":true' && echo "$S" | grep -q '"verticals":30' && echo "$S" | grep -q '"ok":true' && echo "$B" | grep -q '"ok":true'; then
               echo "Public platform health check passed"
               exit 0
             fi
@@ -231,5 +241,5 @@ jobs:
             const server = '${{ steps.server.outcome }}';
             const publicHealth = '${{ steps.public.outcome }}';
             const icon = server === 'success' && publicHealth === 'success' ? '✅' : (server === 'success' ? '⚠️' : '❌');
-            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public platform: **${publicHealth}**\n- Deep vertical websites: **30/30**\n- Public pages per business: **Home + Services + Catalog + About + Contact**\n- Homepage sections: **8+**\n- Customer account/portal: **enabled**\n- Tenant DB: **customers + requests + catalog + favorites + page overrides**\n- Legacy SMS links → full site: **enabled**\n- Real-photo visual systems: **30 vertical-specific blueprints**\n- Google Maps CSV/XLSX import: **validated**\n- Live Maps embed: **enabled when key exists**\n- SMS providers: **MeliPayamak + IPPanel + Kavenegar**\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n- Call Desk: https://ppos.smarbiz.sbs/admin/calls\n`;
+            const body = `${icon} **Production check for ${context.sha.substring(0, 7)}**\n\n- Server deploy: **${server}**\n- Public platform: **${publicHealth}**\n- Beauty OS: **public site + booking + customer portal + salon dashboard**\n- Multi-tenant SaaS models: **12/12**\n- Deep outbound verticals: **30/30**\n- Public pages per business: **Home + Services + Catalog + About + Contact**\n- Customer account/portal: **enabled**\n- Legacy SMS links → full site: **enabled**\n- Google Maps CSV/XLSX import: **validated**\n- Live Maps embed: **enabled when key exists**\n- SMS providers: **MeliPayamak + IPPanel + Kavenegar**\n- Beauty OS demo: https://ppos.smarbiz.sbs/beauty-os\n- Campaign hub: https://ppos.smarbiz.sbs/admin/campaigns\n- Outbound Ops: https://ppos.smarbiz.sbs/admin/outreach\n- Call Desk: https://ppos.smarbiz.sbs/admin/calls\n`;
             await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: 1, body});

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="{{ business.primary_color }}">
+  <meta name="description" content="رزرو آنلاین خدمات {{ business.name }}؛ انتخاب خدمت، متخصص و زمان مناسب بدون تماس تلفنی.">
+  <title>{{ business.name }} | رزرو آنلاین</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='beauty_os.css') }}">
+</head>
+<body class="beauty-public" style="--brand:{{ business.primary_color }};--rose:{{ business.secondary_color }}">
+  <header class="bp-nav" id="top">
+    <a class="bp-brand" href="#top" aria-label="{{ business.name }}">
+      {% if business.logo_url %}<img src="{{ business.logo_url }}" alt="لوگوی {{ business.name }}">{% else %}<span>{{ business.name[:1] }}</span>{% endif %}
+      <div><strong>{{ business.name }}</strong><small>BEAUTY • BY APPOINTMENT</small></div>
+    </a>
+    <nav aria-label="منوی اصلی">
+      <a href="#services">خدمات</a><a href="#team">متخصص‌ها</a><a href="#results">نمونه‌کار</a><a href="#reviews">نظر مشتریان</a><a href="#location">آدرس</a>
+    </nav>
+    <div class="bp-nav-actions">
+      <a class="bp-account" href="{{ url_for('beauty_customer_account', slug=business.slug) }}">{% if customer %}پنل من{% else %}ورود{% endif %}</a>
+      <button class="bp-menu" type="button" aria-label="بازکردن منو" aria-expanded="false">☰</button>
+      <a class="bp-book-small" href="#booking">رزرو وقت</a>
+    </div>
+  </header>
+  <div class="bp-mobile-menu" aria-hidden="true"><a href="#services">خدمات</a><a href="#team">متخصص‌ها</a><a href="#results">نمونه‌کار</a><a href="#reviews">نظرها</a><a href="#location">آدرس</a></div>
+
+  <main>
+    <section class="bp-hero">
+      <div class="bp-hero-media" style="background-image:url('{{ business.settings.hero_image }}')"></div>
+      <div class="bp-hero-shade"></div>
+      <div class="bp-hero-content reveal">
+        <span class="bp-kicker"><i></i> رزرو آنلاین {{ business.name }}</span>
+        <h1>زیبایی تو،<br><em>در زمان خودت.</em></h1>
+        <p>{{ business.settings.tagline }}؛ خدمت و متخصص را انتخاب کن و بدون تماس‌های رفت‌وبرگشتی وقت بگیر.</p>
+        <div class="bp-hero-actions"><a class="bp-btn light" href="#booking">رزرو آنلاین <b>←</b></a><a class="bp-btn glass" href="#services">مشاهده خدمات</a></div>
+        <div class="bp-hero-note"><span class="bp-pulse"></span><div><strong>نزدیک‌ترین وقت آزاد</strong><small>امروز، ساعت ۱۶:۳۰</small></div><a href="#booking">انتخاب</a></div>
+      </div>
+      <div class="bp-hero-side"><span>SCROLL TO DISCOVER</span><i></i></div>
+    </section>
+
+    <section class="bp-trust" aria-label="اعتبار سالن">
+      <div><strong>{{ stats.rating }}</strong><span>امتیاز مشتریان</span><small>★★★★★</small></div>
+      <div><strong>+{{ business.settings.experience }}</strong><span>سال تجربه تخصصی</span></div>
+      <div><strong>+{{ business.settings.customers_served }}</strong><span>مشتری خوشحال</span></div>
+      <div><strong>{{ stats.team }}</strong><span>متخصص حرفه‌ای</span></div>
+      <div class="bp-trust-copy"><i></i><p>تجربه‌ای آرام، حرفه‌ای و دقیق؛ از انتخاب وقت تا پایان خدمات.</p></div>
+    </section>
+
+    <section class="bp-section bp-services" id="services">
+      <header class="bp-section-head reveal"><div><span>01 / خدمات</span><h2>برای حال خوب تو،<br>با جزئیات کامل.</h2></div><p>قیمت، مدت و متخصص هر خدمت را شفاف ببین. چیزی برای پرسیدن پشت تماس تلفنی نمی‌ماند.</p></header>
+      <div class="bp-filters" role="tablist"><button class="active" data-filter="all">همه</button>{% for category in categories %}<button data-filter="{{ category }}">{{ category }}</button>{% endfor %}</div>
+      <div class="bp-service-grid">
+        {% for service in services %}
+        <article class="bp-service-card reveal" data-category="{{ service.category }}">
+          <div class="bp-service-photo" style="background-image:url('{{ service.image_url }}')"><span>{{ service.category }}</span><button class="bp-favorite" data-favorite="{{ service.id }}" aria-label="افزودن به علاقه‌مندی">♡</button></div>
+          <div class="bp-service-body"><div><h3>{{ service.name }}</h3><p>{{ service.description }}</p></div><div class="bp-service-meta"><span><small>مدت</small><b>{{ service.duration_minutes }} دقیقه</b></span><span><small>شروع قیمت</small><b>{{ '{:,}'.format(service.price) }} تومان</b></span></div><button class="bp-inline-book" data-service="{{ service.id }}">رزرو این خدمت <b>←</b></button></div>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="bp-team" id="team">
+      <div class="bp-team-copy reveal"><span>02 / تیم حرفه‌ای</span><h2>متخصص مناسب،<br>انتخاب خودت.</h2><p>تجربه، امتیاز و زمان‌های آزاد هر متخصص را قبل از رزرو ببین.</p><a href="#booking">دیدن وقت‌های آزاد ←</a></div>
+      <div class="bp-team-list">
+        {% for member in staff %}
+        <article class="bp-staff-card reveal"><div class="bp-staff-photo" style="background-image:url('{{ member.image_url }}')"><span>{{ member.rating }} ★</span></div><div><small>{{ member.role }}</small><h3>{{ member.name }}</h3><p>{{ member.experience_years }} سال تجربه تخصصی</p><div class="bp-open"><i></i> پذیرش رزرو این هفته</div><button data-staff="{{ member.id }}">رزرو با {{ member.name.split(' ')[0] }}</button></div></article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="bp-results" id="results">
+      <header class="bp-section-head reveal"><div><span>03 / قبل و بعد</span><h2>نتیجه‌ای که<br>خودش حرف می‌زند.</h2></div><p>نمونه‌هایی از تجربه‌های واقعی تیم {{ business.name }}. برای دیدن جزئیات، روی تصویر بزن.</p></header>
+      <div class="bp-gallery">
+        {% for image in business.settings.gallery %}<button class="reveal" style="background-image:url('{{ image }}')" data-gallery="{{ loop.index0 }}" aria-label="مشاهده نمونه‌کار {{ loop.index }}"><span>{% if loop.index is odd %}قبل / بعد{% else %}نمونه کار{% endif %}</span></button>{% endfor %}
+      </div>
+    </section>
+
+    <section class="bp-booking" id="booking">
+      <div class="bp-booking-intro reveal"><span>04 / رزرو آنلاین</span><h2>وقت زیبایی‌ات را<br>در چند قدم بگیر.</h2><p>بدون تماس و بدون انتظار. تأیید رزرو بلافاصله نمایش داده می‌شود و در پنل تو می‌ماند.</p><div class="bp-flow-preview"><span class="active">خدمت</span><i></i><span>متخصص</span><i></i><span>تاریخ</span><i></i><span>ساعت</span><i></i><span>تأیید</span></div></div>
+      <div class="bp-booker reveal">
+        <div class="bp-booker-top"><span id="bookStepLabel">مرحله ۱ از ۵</span><div><i class="active"></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="bp-book-panel active" data-step="1"><h3>کدام خدمت را می‌خواهی؟</h3><p>بعداً می‌توانی انتخابت را تغییر بدهی.</p><div class="bp-book-services">{% for service in services %}<button data-book-service="{{ service.id }}"><span style="background-image:url('{{ service.image_url }}')"></span><div><b>{{ service.name }}</b><small>{{ service.duration_minutes }} دقیقه · {{ '{:,}'.format(service.price) }} تومان</small></div><i>›</i></button>{% endfor %}</div></div>
+        <div class="bp-book-panel" data-step="2"><h3>متخصصت را انتخاب کن</h3><p>فقط متخصص‌های همین خدمت نشان داده می‌شوند.</p><div class="bp-book-staff"></div></div>
+        <div class="bp-book-panel" data-step="3"><h3>چه روزی برایت بهتر است؟</h3><p>وقت‌های ۱۴ روز آینده را می‌بینی.</p><div class="bp-book-dates"></div></div>
+        <div class="bp-book-panel" data-step="4"><h3>ساعت مناسب را انتخاب کن</h3><p>زمان‌ها براساس برنامه متخصص به‌روز هستند.</p><div class="bp-book-times"><div class="bp-loading"><i></i><span>در حال بررسی وقت‌های آزاد…</span></div></div></div>
+        <form class="bp-book-panel" data-step="5" id="bookingForm"><h3>رزرو را نهایی کن</h3><p>جزئیات وقت قبل از ثبت نهایی اینجا نمایش داده می‌شود.</p><div class="bp-book-summary"></div><label><span>نام و نام خانوادگی</span><input name="name" autocomplete="name" value="{{ customer.name if customer else '' }}" required placeholder="مثلاً سارا احمدی"></label><label><span>شماره موبایل</span><input name="phone" inputmode="tel" autocomplete="tel" value="{{ customer.phone if customer else '' }}" required placeholder="09xxxxxxxxx"></label><label><span>توضیح برای متخصص <small>اختیاری</small></span><textarea name="notes" rows="2" placeholder="حساسیت، ترجیح رنگ یا هر نکته دیگر"></textarea></label><button class="bp-confirm" type="submit">تأیید و ثبت رزرو <b>←</b></button><small class="bp-policy">با ثبت رزرو، قوانین لغو ۱۲ ساعته را می‌پذیری.</small></form>
+        <button class="bp-back" type="button" hidden>→ بازگشت</button>
+      </div>
+    </section>
+
+    <section class="bp-benefits">
+      <div class="bp-benefit-lead reveal"><span>05 / تجربه بدون دردسر</span><h2>برای تو ساخته شده،<br>نه برای پیچیده‌کردن کار.</h2></div>
+      <div class="bp-benefit-grid">
+        <article class="reveal"><i>01</i><h3>بدون انتظار</h3><p>زمان دقیق را انتخاب کن و سر وقت پذیرش شو.</p></article>
+        <article class="reveal"><i>02</i><h3>رزرو خیلی ساده</h3><p>خدمت تا تأیید نهایی، کمتر از یک دقیقه.</p></article>
+        <article class="reveal"><i>03</i><h3>یادآوری به‌موقع</h3><p>جزئیات وقت قبل از مراجعه برایت می‌آید.</p></article>
+        <article class="reveal"><i>04</i><h3>پیشنهاد شخصی</h3><p>براساس خدمات قبلی، پیشنهاد مرتبط می‌گیری.</p></article>
+      </div>
+    </section>
+
+    <section class="bp-loyalty">
+      <div class="bp-loyalty-photo" style="background-image:url('https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&w=1400&q=88')"></div>
+      <div class="bp-loyalty-copy reveal"><span>باشگاه مشتریان مروارید</span><h2>هر مراجعه،<br>یک قدم تا هدیه بعدی.</h2><p>رزروها، امتیازها، خدمات محبوب و پیشنهادهای مخصوص خودت را در یک پنل ساده ببین.</p><ul><li><i>✓</i> ۱۰ امتیاز برای رزرو آنلاین</li><li><i>✓</i> ۵۰ امتیاز بعد از مراجعه</li><li><i>✓</i> هدیه تولد و پیشنهادهای اختصاصی</li></ul><a class="bp-btn dark" href="{{ url_for('beauty_customer_account', slug=business.slug) }}">مشاهده پنل من</a></div>
+    </section>
+
+    <section class="bp-reviews" id="reviews">
+      <header class="bp-section-head reveal"><div><span>06 / تجربه مشتریان</span><h2>حرف کسانی که<br>اینجا را انتخاب کرده‌اند.</h2></div><div class="bp-rating-big"><strong>{{ stats.rating }}</strong><span>از ۵ · براساس {{ stats.reviews }} نظر</span><small>★★★★★</small></div></header>
+      <div class="bp-review-grid">{% for review in reviews %}<article class="reveal"><span>“</span><div class="stars">{% for _ in range(review.rating) %}★{% endfor %}</div><p>{{ review.body }}</p><footer><i>{{ review.customer_name[:1] if review.customer_name else 'م' }}</i><div><b>{{ review.customer_name or 'مشتری مروارید' }}</b><small>مراجعه تأییدشده</small></div></footer></article>{% endfor %}</div>
+    </section>
+
+    <section class="bp-location" id="location">
+      <div class="bp-location-copy reveal"><span>07 / اینجا منتظرت هستیم</span><h2>نزدیک، آرام<br>و قابل دسترس.</h2><p>{{ business.address or business.city or 'تهران' }}</p><div><small>ساعت کاری</small><strong>{{ business.settings.working_hours }}</strong></div><div><small>تماس</small><a href="tel:{{ business.phone }}" dir="ltr">{{ business.phone or '021-00000000' }}</a></div>{% if business.instagram %}<a class="bp-instagram" href="https://instagram.com/{{ business.instagram.lstrip('@') }}" target="_blank" rel="noopener">@{{ business.instagram.lstrip('@') }}</a>{% endif %}<a class="bp-btn dark" href="#booking">رزرو این شعبه</a></div>
+      <div class="bp-map reveal">{% if maps_embed_key %}<iframe title="موقعیت {{ business.name }}" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps/embed/v1/place?key={{ maps_embed_key }}&q={{ business.map_query|urlencode }}"></iframe>{% else %}<iframe title="موقعیت {{ business.name }}" loading="lazy" src="https://www.google.com/maps?q={{ business.map_query|urlencode }}&output=embed"></iframe>{% endif %}<div><span>{{ business.name }}</span><small>{{ business.address }}</small></div></div>
+    </section>
+
+    <section class="bp-final"><div class="reveal"><span>وقت تو ارزشمند است</span><h2>آماده‌ای یک وقت<br><em>فقط برای خودت</em> بسازی؟</h2><p>کمتر از یک دقیقه تا رزرو قطعی فاصله داری.</p><a class="bp-btn light" href="#booking">انتخاب خدمت و زمان <b>←</b></a></div></section>
+  </main>
+
+  <footer class="bp-footer"><a class="bp-brand" href="#top"><span>{{ business.name[:1] }}</span><div><strong>{{ business.name }}</strong><small>BEAUTY • BY APPOINTMENT</small></div></a><div><a href="#services">خدمات</a><a href="#team">تیم</a><a href="#reviews">نظرات</a><a href="#location">ارتباط</a></div><p>© {{ business.name }} · تمام حقوق محفوظ است.</p><small>قدرت‌گرفته از PPOS Beauty OS</small></footer>
+  <a class="bp-mobile-cta" href="#booking">رزرو آنلاین <span>←</span></a>
+
+  <dialog class="bp-confirm-dialog"><button type="button" aria-label="بستن">×</button><div class="bp-success-mark">✓</div><small>رزرو با موفقیت ثبت شد</small><h2>وقت زیبایی‌ات آماده است.</h2><p class="bp-confirm-copy"></p><div class="bp-reserve-code"><span>کد پیگیری</span><strong></strong></div><a class="bp-btn dark bp-account-link" href="#">ورود به پنل و پیگیری</a></dialog>
+  <dialog class="bp-gallery-dialog"><button type="button" aria-label="بستن">×</button><img alt="نمونه‌کار {{ business.name }}"><div><button data-gallery-prev>→</button><span>نمونه‌کار {{ business.name }}</span><button data-gallery-next>←</button></div></dialog>
+
+  <script id="beauty-data" type="application/json">{{ {'slug':business.slug,'services':services,'staff':staff,'gallery':business.settings.gallery}|tojson }}</script>
+  <script src="{{ url_for('static', filename='beauty_os.js') }}" defer></script>
+</body>
+</html>
