@@ -59,11 +59,13 @@ jobs:
             .venv/bin/python -m py_compile app.py capture.py exports.py campaigns.py verticals.py activation.py campaign_tools.py data_ingest.py outreach.py call_ops.py presentation.py outbound_copy.py site_blueprints.py vertical_sites.py booking_os.py site_redirects.py db_optimizations.py vendor_compat.py wsgi.py
             .venv/bin/python -m unittest -v tests.test_beauty_os
             .venv/bin/python - <<'PY'
-            import sqlite3
+            import io, sqlite3
+            from openpyxl import Workbook
+            from werkzeug.datastructures import FileStorage
             from wsgi import app, DB_PATH
             from verticals import VERTICALS, CAMPAIGN_ORDER
             from site_blueprints import SITE_BLUEPRINTS, get_blueprint
-            from data_ingest import _header_map, detect_vertical, _normalize_mobile, _normalize_phone
+            from data_ingest import _header_map, detect_vertical, _normalize_mobile, _normalize_phone, _rows_from_upload
             c = app.test_client()
             assert c.get('/').status_code == 200
             assert len(VERTICALS) == 30 and len(CAMPAIGN_ORDER) == 30
@@ -98,15 +100,27 @@ jobs:
             assert hm['business_name'] == 'نام فروشگاه یا مرکز'
             assert hm['category'] == 'تفکیک صنف'
             assert hm['mobile'] == 'شماره موبایل'
-            google_headers = ['title','category','phone','full_address','website','rating','reviews_count','place_id','latitude','longitude','google_maps_url']
+            google_headers = ['Name','Category','phoneNumber','Address','Website','Rating','Reviews count','Location Lat','Location Lng','social Links','Images']
             ghm = _header_map(google_headers)
-            for required_google in ['business_name','category','phone_any','address','website','rating','reviews','place_id','latitude','longitude','maps_url']:
+            for required_google in ['business_name','category','phone_any','address','website','rating','reviews','latitude','longitude','instagram','logo_url']:
                 assert required_google in ghm, f'Google Maps header missing: {required_google}'
             assert detect_vertical('Beauty salon') == 'beauty'
             assert detect_vertical('Real estate agency') == 'realestate'
             assert detect_vertical('Auto repair shop') == 'repair'
             assert _normalize_mobile('+98 912 123 4567') == '09121234567'
             assert _normalize_phone('+98 21 1234 5678').startswith('021')
+
+            # Regression: metadata rows before the real XLSX header, parsed from
+            # an in-memory Werkzeug FileStorage instead of passing the temp file
+            # directly into openpyxl.
+            wb = Workbook(); ws = wb.active
+            for i in range(6): ws.append([f'Export metadata {i+1}'])
+            ws.append(google_headers)
+            ws.append(['سالن تست','Beauty salon','+98 912 123 4567','کرج','https://example.com',4.8,33,35.8,50.9,'https://instagram.com/test','https://example.com/a.jpg'])
+            buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+            upload = FileStorage(stream=buf, filename='google-export.xlsx')
+            parsed = list(_rows_from_upload(upload))
+            assert len(parsed) == 1 and parsed[0]['Name'] == 'سالن تست'
 
             conn = sqlite3.connect(DB_PATH)
             table_names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
